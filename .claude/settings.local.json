@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter create:*)",
+      "Bash(/mnt/c/flutter/flutter/bin/flutter create . --org com.eggtoeic --platforms ios,android --project-name egg_toeic)",
+      "Bash(mkdir:*)",
+      "Bash(flutter pub:*)",
+      "Bash(dart run build_runner:*)",
+      "Bash(tree:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

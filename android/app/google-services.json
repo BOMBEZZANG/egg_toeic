@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "460976305272",
+    "project_id": "eggtoeic-9c88f",
+    "storage_bucket": "eggtoeic-9c88f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:460976305272:android:b3054ca1e5c4dad0df298d",
+        "android_client_info": {
+          "package_name": "com.example.egg_toeic"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB_hrgT7uGsTE_R35cMFFHrD3_wkMcKa4U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
