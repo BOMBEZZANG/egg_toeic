@@ -1,0 +1,50 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Allow read access to practice questions for Flutter app
+    match /practiceQuestions/{questionId} {
+      allow read: if true;
+      allow write: if false; // Only admin can write
+    }
+
+    // Allow read access to exam questions for Flutter app
+    match /examQuestions/{questionId} {
+      allow read: if true;
+      allow write: if false; // Only admin can write
+    }
+
+    // Allow read access to metadata collection for efficient queries
+    match /metadata/{docId} {
+      allow read: if true;
+      allow write: if false; // Only admin can write
+    }
+
+    // Allow read access to daily practice metadata
+    match /metadata/practice/daily/{date} {
+      allow read: if true;
+      allow write: if false; // Only admin can write
+    }
+
+    // Allow read access to legacy question collections (fallback)
+    match /questions_part5/{questionId} {
+      allow read: if true;
+      allow write: if false; // Only admin can write
+    }
+
+    match /part5_questions/{questionId} {
+      allow read: if true;
+      allow write: if false; // Only admin can write
+    }
+
+    match /questions/{questionId} {
+      allow read: if true;
+      allow write: if false; // Only admin can write
+    }
+
+    // Keep admin write access for other collections
+    match /{document=**} {
+      allow read, write: if false; // Secure by default
+    }
+  }
+}

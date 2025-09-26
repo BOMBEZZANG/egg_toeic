@@ -16,6 +16,7 @@ abstract class TempUserDataRepository extends BaseRepository {
   Future<void> incrementTotalQuestions({required bool isCorrect});
   Future<List<WrongAnswer>> getWrongAnswers();
   Future<void> addWrongAnswer(WrongAnswer wrongAnswer);
+  Future<void> removeWrongAnswer(String wrongAnswerId);
   Future<void> markWrongAnswerAsResolved(String wrongAnswerId);
   Future<List<WrongAnswer>> getWrongAnswersNeedingReview();
   Future<List<LearningSession>> getLearningSessions();
@@ -139,12 +140,38 @@ class TempUserDataRepositoryImpl implements UserDataRepository {
 
   @override
   Future<List<WrongAnswer>> getWrongAnswers() async {
+    print('📖 Repository GET wrong answers:');
+    print('  - Repository instance: ${hashCode}');
+    print('  - _wrongAnswers list: ${_wrongAnswers.hashCode}');
+    print('  - Count: ${_wrongAnswers.length}');
+    for (var i = 0; i < _wrongAnswers.length; i++) {
+      print('    $i: ${_wrongAnswers[i].questionId}');
+    }
     return _wrongAnswers;
   }
 
   @override
   Future<void> addWrongAnswer(WrongAnswer wrongAnswer) async {
+    print('💾 Repository ADDING wrong answer:');
+    print('  - ID: ${wrongAnswer.id}');
+    print('  - QuestionID: ${wrongAnswer.questionId}');
+    print('  - QuestionText: "${wrongAnswer.questionText}" (null: ${wrongAnswer.questionText == null})');
+    print('  - Options: ${wrongAnswer.options} (null: ${wrongAnswer.options == null})');
+    print('  - Repository instance: ${hashCode}');
+    print('  - Current _wrongAnswers list: ${_wrongAnswers.hashCode}');
+
     _wrongAnswers.add(wrongAnswer);
+
+    print('💾 Repository ADDED. Total count: ${_wrongAnswers.length}');
+    print('💾 Current items in list:');
+    for (var i = 0; i < _wrongAnswers.length; i++) {
+      print('    $i: ${_wrongAnswers[i].questionId}');
+    }
+  }
+
+  @override
+  Future<void> removeWrongAnswer(String wrongAnswerId) async {
+    _wrongAnswers.removeWhere((wa) => wa.id == wrongAnswerId);
   }
 
   @override
@@ -287,4 +314,44 @@ class TempUserDataRepositoryImpl implements UserDataRepository {
 
     return newAchievements;
   }
+
+  @override
+  Future<void> updateQuestionResult({
+    required String questionId,
+    required bool isCorrect,
+    required int answerTime,
+    required String mode,
+  }) async {
+    print('📊 updateQuestionResult called:');
+    print('  - questionId: $questionId');
+    print('  - isCorrect: $isCorrect');
+    print('  - mode: $mode');
+    print('  - NOTE: Wrong answers should be handled by practice screens, not here');
+
+    // Update total question stats
+    await incrementTotalQuestions(isCorrect: isCorrect);
+
+    // Add experience points for correct answers
+    if (isCorrect) {
+      await addExperience(10); // 10 XP for correct answer
+    }
+
+    // NOTE: Removed wrong answer creation from here
+    // Wrong answers should be created by practice/exam screens with full question data
+    // This method should only handle progress/stats updates
+
+    // Update current session if active
+    await updateCurrentSession(
+      questionId: questionId,
+      questionsAnswered: null, // Let the session manage this
+      correctAnswers: null,    // Let the session manage this
+    );
+
+    // Increment daily streak
+    await incrementStreak();
+
+    // Check for new achievements
+    await checkForNewAchievements();
+  }
 }
+

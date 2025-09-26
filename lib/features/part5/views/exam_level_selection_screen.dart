@@ -3,16 +3,52 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:egg_toeic/core/constants/app_colors.dart';
 import 'package:egg_toeic/core/theme/app_theme.dart';
+import 'package:egg_toeic/providers/repository_providers.dart';
 
-class ExamLevelSelectionScreen extends ConsumerWidget {
+class ExamLevelSelectionScreen extends ConsumerStatefulWidget {
   const ExamLevelSelectionScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ExamLevelSelectionScreen> createState() => _ExamLevelSelectionScreenState();
+}
+
+class _ExamLevelSelectionScreenState extends ConsumerState<ExamLevelSelectionScreen> {
+  List<String> _availableRounds = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAvailableRounds();
+  }
+
+  Future<void> _loadAvailableRounds() async {
+    try {
+      final questionRepo = ref.read(questionRepositoryProvider);
+      final rounds = await questionRepo.getAvailableExamRounds();
+      if (mounted) {
+        setState(() {
+          _availableRounds = rounds;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Failed to load exam rounds: $e';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Exam Mode - Select Level'),
-        backgroundColor: Colors.orange,
+        title: const Text('시험 모드 - 라운드 선택'),
+        backgroundColor: AppColors.primaryColor,
         foregroundColor: Colors.white,
       ),
       body: Container(
@@ -28,24 +64,105 @@ class ExamLevelSelectionScreen extends ConsumerWidget {
 
               const SizedBox(height: 20),
 
-              // Level Selection
+              // Round Selection
               Expanded(
-                child: ListView.builder(
-                  itemCount: 3,
-                  itemBuilder: (context, index) {
-                    final level = index + 1;
-                    final isUnlocked = true; // All levels unlocked for exam mode
+                child: _isLoading
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryColor),
+                              strokeWidth: 3,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              '라운드 정보를 불러오는 중...',
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : _errorMessage != null
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.error_outline_rounded,
+                                  size: 60,
+                                  color: AppColors.errorColor,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  '라운드 로딩 오류',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  _errorMessage!,
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppColors.textSecondary,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 16),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      _isLoading = true;
+                                      _errorMessage = null;
+                                    });
+                                    _loadAvailableRounds();
+                                  },
+                                  child: const Text('다시 시도'),
+                                ),
+                              ],
+                            ),
+                          )
+                        : _availableRounds.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.quiz_outlined,
+                                      size: 60,
+                                      color: AppColors.textHint,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      '사용 가능한 시험 라운드가 없습니다',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: AppColors.textSecondary,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : ListView.builder(
+                                itemCount: _availableRounds.length,
+                                itemBuilder: (context, index) {
+                                  final round = _availableRounds[index];
+                                  final roundNumber = round.replaceAll('ROUND_', '');
 
-                    return _buildLevelCard(
-                      context,
-                      level: level,
-                      isUnlocked: isUnlocked,
-                      onTap: isUnlocked
-                          ? () => context.push('/part5/exam/$level')
-                          : null,
-                    );
-                  },
-                ),
+                                  return _buildRoundCard(
+                                    context,
+                                    round: round,
+                                    roundNumber: roundNumber,
+                                    onTap: () => context.push('/part5/exam/$round'),
+                                  );
+                                },
+                              ),
               ),
             ],
           ),
@@ -55,140 +172,200 @@ class ExamLevelSelectionScreen extends ConsumerWidget {
   }
 
   Widget _buildInstructionsCard(BuildContext context) {
-    return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: AppColors.primaryGradient,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: AppTheme.subtleShadow,
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Text('⏰', style: TextStyle(fontSize: 24)),
-                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.school_rounded,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 12),
                 Text(
-                  'Exam Mode',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Colors.orange,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  '시험 모드',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            const Text(
-              '• Timed questions just like the real TOEIC exam\n'
-              '• No explanations during the test\n'
-              '• Complete all questions to see your final score\n'
-              '• Test your skills under exam conditions',
-              style: TextStyle(height: 1.5),
-            ),
+            const SizedBox(height: 16),
+            _buildInstructionItem('실제 토익 시험과 같은 시간 제한'),
+            _buildInstructionItem('각 라운드마다 다양한 난이도 혼합'),
+            _buildInstructionItem('시험 중 해설 제공 안됨'),
+            _buildInstructionItem('모든 문제 완료 후 최종 점수 확인'),
+            _buildInstructionItem('실전과 같은 시험 조건에서 실력 테스트'),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLevelCard(
+  Widget _buildInstructionItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 6, right: 12),
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(3),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                height: 1.4,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRoundCard(
     BuildContext context, {
-    required int level,
-    required bool isUnlocked,
+    required String round,
+    required String roundNumber,
     VoidCallback? onTap,
   }) {
-    final levelNames = ['Beginner', 'Intermediate', 'Advanced'];
-    final levelDescriptions = [
-      '10 questions • 8 minutes',
-      '15 questions • 12 minutes',
-      '20 questions • 15 minutes',
+    // Use different cute gradients for each round
+    final gradients = [
+      AppColors.primaryGradient,
+      AppColors.successGradient,
+      AppColors.accentGradient,
+      AppColors.neutralGradient,
     ];
-    final levelColors = [AppColors.successColor, Colors.amber, AppColors.errorColor];
+    final gradient = gradients[int.tryParse(roundNumber)! % gradients.length];
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.orange.withOpacity(0.8),
-              Colors.orange,
-            ],
-          ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.orange.withOpacity(0.3),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(25),
+          boxShadow: AppTheme.subtleShadow,
         ),
         child: Stack(
           children: [
-            // Background Pattern
+            // Cute background pattern
             Positioned(
-              right: -20,
-              top: -20,
+              right: -15,
+              top: -15,
               child: Icon(
-                Icons.timer,
-                size: 120,
+                Icons.star_rounded,
+                size: 80,
+                color: Colors.white.withOpacity(0.15),
+              ),
+            ),
+            Positioned(
+              right: 30,
+              bottom: -10,
+              child: Icon(
+                Icons.favorite_rounded,
+                size: 40,
                 color: Colors.white.withOpacity(0.1),
               ),
             ),
 
             // Content
             Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(24),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    width: 60,
+                    height: 60,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.white.withOpacity(0.25),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.white.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
-                    child: Text(
-                      'L$level',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
+                    child: Center(
+                      child: Text(
+                        roundNumber,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 24,
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 20),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          levelNames[level - 1],
+                          '라운드 $roundNumber',
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 20,
+                            fontSize: 22,
                             fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 6),
                         Text(
-                          levelDescriptions[level - 1],
+                          '혼합 난이도 • 시험 모드',
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.9),
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
+                            letterSpacing: 0.3,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const Icon(
-                    Icons.arrow_forward_ios,
-                    color: Colors.white,
-                    size: 20,
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      color: Colors.white,
+                      size: 18,
+                    ),
                   ),
                 ],
               ),

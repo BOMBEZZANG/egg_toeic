@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:egg_toeic/core/constants/app_colors.dart';
 import 'package:egg_toeic/data/models/simple_models.dart';
+import 'package:egg_toeic/data/models/wrong_answer_model.dart';
 import 'package:egg_toeic/providers/app_providers.dart';
 import 'package:egg_toeic/providers/repository_providers.dart';
 
@@ -56,17 +57,25 @@ class _PracticeModeScreenState extends ConsumerState<PracticeModeScreen>
 
   void _loadQuestions() async {
     try {
+      print('Loading questions for difficulty level: ${widget.difficultyLevel}');
       final questionRepo = ref.read(questionRepositoryProvider);
       final questions = await questionRepo.getQuestions(
         difficultyLevel: widget.difficultyLevel,
         limit: 10,
+        mode: 'practice', // Add mode parameter for practice mode
       );
+      print('Loaded ${questions.length} questions');
+      if (questions.isEmpty) {
+        print('No questions found for difficulty level ${widget.difficultyLevel}');
+      }
       setState(() {
         _questions = questions;
       });
     } catch (e) {
       // Handle error
       print('Error loading questions: $e');
+      print('Error type: ${e.runtimeType}');
+      print('Error details: ${e.toString()}');
     }
   }
 
@@ -478,7 +487,7 @@ class _PracticeModeScreenState extends ConsumerState<PracticeModeScreen>
     HapticFeedback.lightImpact();
   }
 
-  void _submitAnswer() {
+  void _submitAnswer() async {
     if (_selectedAnswer == null) return;
 
     final currentQuestion = _questions[_currentQuestionIndex];
@@ -493,7 +502,76 @@ class _PracticeModeScreenState extends ConsumerState<PracticeModeScreen>
       HapticFeedback.heavyImpact();
     } else {
       HapticFeedback.mediumImpact();
+
+      // Save wrong answer with full question data
+      await _saveWrongAnswer(currentQuestion);
     }
+  }
+
+  Future<void> _saveWrongAnswer(SimpleQuestion question) async {
+    try {
+      print('🔍 Saving wrong answer for level ${widget.difficultyLevel} question:');
+      print('  - Question ID: ${question.id}');
+      print('  - Question Text: "${question.questionText}" (length: ${question.questionText.length})');
+      print('  - Options: ${question.options} (count: ${question.options.length})');
+      print('  - Grammar Point: "${question.grammarPoint}"');
+
+      final wrongAnswer = WrongAnswer.create(
+        questionId: question.id,
+        selectedAnswerIndex: _selectedAnswer!,
+        correctAnswerIndex: question.correctAnswerIndex,
+        grammarPoint: question.grammarPoint,
+        difficultyLevel: widget.difficultyLevel,
+        questionText: question.questionText,
+        options: question.options,
+        modeType: 'practice',
+        category: _getCategoryFromGrammarPoint(question.grammarPoint),
+        tags: _extractTagsFromGrammarPoint(question.grammarPoint),
+        explanation: question.explanation,
+      );
+
+      print('  ✅ BEFORE SAVE: WrongAnswer data:');
+      print('    - questionText: "${wrongAnswer.questionText}" (null: ${wrongAnswer.questionText == null})');
+      print('    - options: ${wrongAnswer.options} (null: ${wrongAnswer.options == null})');
+
+      final repository = ref.read(userDataRepositoryProvider);
+      await repository.addWrongAnswer(wrongAnswer);
+
+      // Refresh wrong answers provider
+      ref.invalidate(wrongAnswersProvider);
+    } catch (e) {
+      print('Error saving wrong answer: $e');
+    }
+  }
+
+  String _getCategoryFromGrammarPoint(String grammarPoint) {
+    // Simple categorization logic - you can enhance this
+    final vocabularyKeywords = ['vocabulary', 'word', 'meaning', 'synonym', 'antonym'];
+    final grammarKeywords = ['tense', 'verb', 'noun', 'adjective', 'adverb', 'preposition', 'conjunction', 'article'];
+
+    final lowerPoint = grammarPoint.toLowerCase();
+
+    if (vocabularyKeywords.any((keyword) => lowerPoint.contains(keyword))) {
+      return 'vocabulary';
+    } else if (grammarKeywords.any((keyword) => lowerPoint.contains(keyword))) {
+      return 'grammar';
+    } else {
+      return 'grammar'; // default to grammar
+    }
+  }
+
+  List<String> _extractTagsFromGrammarPoint(String grammarPoint) {
+    // Extract meaningful tags from grammar point
+    final tags = <String>[];
+    final words = grammarPoint.toLowerCase().split(' ');
+
+    for (String word in words) {
+      if (word.length > 3 && !['and', 'the', 'with', 'for'].contains(word)) {
+        tags.add(word);
+      }
+    }
+
+    return tags.take(3).toList(); // Limit to 3 tags
   }
 
   void _nextQuestion() {

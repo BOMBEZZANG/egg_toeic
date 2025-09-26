@@ -17,6 +17,7 @@ abstract class UserDataRepository extends BaseRepository {
   // Wrong Answers
   Future<List<WrongAnswer>> getWrongAnswers();
   Future<void> addWrongAnswer(WrongAnswer wrongAnswer);
+  Future<void> removeWrongAnswer(String wrongAnswerId);
   Future<void> markWrongAnswerAsResolved(String wrongAnswerId);
   Future<List<WrongAnswer>> getWrongAnswersNeedingReview();
 
@@ -41,6 +42,14 @@ abstract class UserDataRepository extends BaseRepository {
   Future<List<Achievement>> getAchievements();
   Future<void> updateAchievement(Achievement achievement);
   Future<List<Achievement>> checkForNewAchievements();
+
+  // Question Results
+  Future<void> updateQuestionResult({
+    required String questionId,
+    required bool isCorrect,
+    required int answerTime,
+    required String mode,
+  });
 }
 
 class UserDataRepositoryImpl implements UserDataRepository {
@@ -224,6 +233,11 @@ class UserDataRepositoryImpl implements UserDataRepository {
   }
 
   @override
+  Future<void> removeWrongAnswer(String wrongAnswerId) async {
+    _wrongAnswers.removeWhere((wa) => wa.id == wrongAnswerId);
+  }
+
+  @override
   Future<void> markWrongAnswerAsResolved(String wrongAnswerId) async {
     final index = _wrongAnswers.indexWhere((wa) => wa.id == wrongAnswerId);
     if (index != -1) {
@@ -366,5 +380,38 @@ class UserDataRepositoryImpl implements UserDataRepository {
     }
 
     return newAchievements;
+  }
+
+  @override
+  Future<void> updateQuestionResult({
+    required String questionId,
+    required bool isCorrect,
+    required int answerTime,
+    required String mode,
+  }) async {
+    // Update total question stats
+    await incrementTotalQuestions(isCorrect: isCorrect);
+
+    // Add experience points for correct answers
+    if (isCorrect) {
+      await addExperience(10); // 10 XP for correct answer
+    }
+
+    // NOTE: Removed wrong answer creation from here
+    // Wrong answers should be created by practice/exam screens with full question data
+    // This method should only handle progress/stats updates
+
+    // Update current session if active
+    await updateCurrentSession(
+      questionId: questionId,
+      questionsAnswered: null, // Let the session manage this
+      correctAnswers: null,    // Let the session manage this
+    );
+
+    // Increment daily streak
+    await incrementStreak();
+
+    // Check for new achievements
+    await checkForNewAchievements();
   }
 }

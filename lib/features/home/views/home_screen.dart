@@ -66,6 +66,14 @@ class HomeScreen extends ConsumerWidget {
                     ),
                     _buildCuteMenuCard(
                       context,
+                      title: '복습하기',
+                      subtitle: 'Review & Practice',
+                      emoji: '🔄',
+                      color: AppColors.tertiaryColor,
+                      onTap: () => context.push('/review-select'),
+                    ),
+                    _buildCuteMenuCard(
+                      context,
                       title: 'Achievements',
                       subtitle: 'Your trophies',
                       emoji: '🏆',
@@ -94,7 +102,7 @@ class HomeScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: const BoxDecoration(
-        gradient: AppTheme.backgroundGradient,
+        gradient: AppColors.backgroundGradient,
       ),
       child: Row(
         children: [

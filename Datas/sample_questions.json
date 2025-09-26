@@ -1,0 +1,112 @@
+[
+  {
+    "id": "L2_GRAM_T11_Q1",
+    "questionNumber": 1,
+    "questionType": "grammar",
+    "questionCategory": "Conditional Sentences",
+    "questionText": "_____ the delivery truck arrive at the warehouse late, the shipment will be delayed.",
+    "options": [
+      "Should",
+      "Would",
+      "May",
+      "Unless"
+    ],
+    "correctAnswerIndex": 0,
+    "difficultyLevel": 2,
+    "explanation": "'Should' at the beginning of a sentence forms an inverted conditional ('If the truck should arrive late').",
+    "grammarPoint": "Inverted Conditionals",
+    "tags": [
+      "conditional",
+      "inversion",
+      "intermediate"
+    ]
+  },
+  {
+    "id": "L2_GRAM_T11_Q2",
+    "questionNumber": 2,
+    "questionType": "grammar",
+    "questionCategory": "Relative Pronouns",
+    "questionText": "Gorman Dental Clinic is seeking a dental assistant _____ is organized and attentive to detail.",
+    "options": [
+      "who",
+      "that",
+      "which",
+      "whose"
+    ],
+    "correctAnswerIndex": 1,
+    "difficultyLevel": 2,
+    "explanation": "'That' is an acceptable relative pronoun for people in restrictive clauses, though 'who' is also correct.",
+    "grammarPoint": "Relative Pronouns for People",
+    "tags": [
+      "relative-pronoun",
+      "restrictive-clause",
+      "intermediate"
+    ]
+  },
+  {
+    "id": "L2_GRAM_T11_Q3",
+    "questionNumber": 3,
+    "questionType": "grammar",
+    "questionCategory": "Present Perfect",
+    "questionText": "Ms. Choi _____ to the theater before, so she is eager to see a musical there.",
+    "options": [
+      "has not gone",
+      "had not gone",
+      "would not go",
+      "is not going"
+    ],
+    "correctAnswerIndex": 0,
+    "difficultyLevel": 2,
+    "explanation": "Present perfect 'has not gone' is used for life experiences up to now.",
+    "grammarPoint": "Present Perfect for Experience",
+    "tags": [
+      "present-perfect",
+      "negative",
+      "intermediate"
+    ]
+  },
+  {
+    "id": "L2_GRAM_T11_Q4",
+    "questionNumber": 4,
+    "questionType": "grammar",
+    "questionCategory": "Causative Verbs",
+    "questionText": "The supervisor _____ the workers redo the landscaping to fix the uneven surface.",
+    "options": [
+      "had",
+      "made",
+      "got",
+      "let"
+    ],
+    "correctAnswerIndex": 1,
+    "difficultyLevel": 2,
+    "explanation": "'Make someone do' expresses forcing someone to do something.",
+    "grammarPoint": "Causative Verbs: Make",
+    "tags": [
+      "causative",
+      "force",
+      "intermediate"
+    ]
+  },
+  {
+    "id": "L2_GRAM_T11_Q5",
+    "questionNumber": 5,
+    "questionType": "grammar",
+    "questionCategory": "Adjective Placement",
+    "questionText": "Ms. White is working toward her _____ goal of becoming a professional sculptor.",
+    "options": [
+      "ultimate",
+      "ultimately",
+      "ultimatum",
+      "ultimately"
+    ],
+    "correctAnswerIndex": 0,
+    "difficultyLevel": 2,
+    "explanation": "'Ultimate' is the adjective meaning 'final' or 'most important.'",
+    "grammarPoint": "Adjective Placement",
+    "tags": [
+      "adjective",
+      "noun-modifier",
+      "intermediate"
+    ]
+  }
+]

@@ -6,11 +6,15 @@ import 'package:egg_toeic/features/part5/views/part5_mode_selection_screen.dart'
 import 'package:egg_toeic/features/part5/views/practice_level_selection_screen.dart';
 import 'package:egg_toeic/features/part5/views/exam_level_selection_screen.dart';
 import 'package:egg_toeic/features/part5/views/practice_mode_screen.dart';
+import 'package:egg_toeic/features/part5/views/practice_date_mode_screen.dart';
 import 'package:egg_toeic/features/part5/views/exam_mode_screen.dart';
 import 'package:egg_toeic/features/part5/views/explanation_screen.dart';
 import 'package:egg_toeic/features/part2/views/part2_home_screen.dart';
 import 'package:egg_toeic/features/achievements/views/achievements_screen.dart';
 import 'package:egg_toeic/features/statistics/views/statistics_screen.dart';
+import 'package:egg_toeic/features/review/views/review_select_screen.dart';
+import 'package:egg_toeic/features/wrong_answers/views/wrong_answers_screen.dart';
+import 'package:egg_toeic/features/wrong_answers/views/retake_question_screen.dart';
 import 'package:egg_toeic/data/models/simple_models.dart';
 import 'package:egg_toeic/data/models/wrong_answer_model.dart';
 
@@ -47,11 +51,25 @@ final routerProvider = Provider<GoRouter>((ref) {
             },
           ),
           GoRoute(
-            path: 'exam/:level',
+            path: 'practice/session/:sessionId',
+            name: 'practice-session',
+            builder: (context, state) {
+              final sessionId = state.pathParameters['sessionId'] ?? '';
+              // Extract date from session ID (format: firebase_YYYY_MM_DD)
+              String date = '2025-09-25'; // fallback
+              if (sessionId.startsWith('firebase_')) {
+                final datePart = sessionId.substring(9); // Remove 'firebase_'
+                date = datePart.replaceAll('_', '-'); // Convert YYYY_MM_DD to YYYY-MM-DD
+              }
+              return PracticeDateModeScreen(date: date);
+            },
+          ),
+          GoRoute(
+            path: 'exam/:round',
             name: 'exam',
             builder: (context, state) {
-              final level = int.tryParse(state.pathParameters['level'] ?? '1') ?? 1;
-              return ExamModeScreen(difficultyLevel: level);
+              final round = state.pathParameters['round'] ?? 'ROUND_1';
+              return ExamModeScreen(round: round);
             },
           ),
           GoRoute(
@@ -78,6 +96,26 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/statistics',
         name: 'statistics',
         builder: (context, state) => const StatisticsScreen(),
+      ),
+      GoRoute(
+        path: '/review-select',
+        name: 'review-select',
+        builder: (context, state) => const ReviewSelectScreen(),
+      ),
+      GoRoute(
+        path: '/wrong-answers',
+        name: 'wrong-answers',
+        builder: (context, state) => const WrongAnswersScreen(),
+        routes: [
+          GoRoute(
+            path: 'retake',
+            name: 'retake-question',
+            builder: (context, state) {
+              final wrongAnswer = state.extra as WrongAnswer;
+              return RetakeQuestionScreen(wrongAnswer: wrongAnswer);
+            },
+          ),
+        ],
       ),
     ],
   );

@@ -83,8 +83,53 @@ final questionByIdProvider =
 
 // Wrong Answers Providers
 final wrongAnswersProvider = FutureProvider<List<WrongAnswer>>((ref) async {
+  print('🔄 wrongAnswersProvider: Starting to load wrong answers...');
+
   final repository = ref.read(userDataRepositoryProvider);
-  return await repository.getWrongAnswers();
+  final questionRepository = ref.read(questionRepositoryProvider);
+
+  print('🔄 wrongAnswersProvider: Got repository instances');
+
+  final wrongAnswers = await repository.getWrongAnswers();
+
+  print('📚 wrongAnswersProvider: Loaded ${wrongAnswers.length} wrong answers from repository');
+
+  // Enrich wrong answers with question data if missing
+  final enrichedWrongAnswers = <WrongAnswer>[];
+  for (final wa in wrongAnswers) {
+    print('  - Processing: ${wa.questionId}, Level: ${wa.difficultyLevel}, '
+          'QuestionText: ${wa.questionText != null ? "✓" : "✗"}, '
+          'Options: ${wa.options != null ? "✓ (${wa.options!.length})" : "✗"}');
+
+    if (wa.questionText == null || wa.options == null) {
+      print('    🔄 Enriching question data for: ${wa.questionId}');
+      try {
+        final question = await questionRepository.getQuestionById(wa.questionId);
+        if (question != null) {
+          final enrichedWa = wa.copyWith(
+            questionText: question.questionText,
+            options: question.options,
+            explanation: question.explanation,
+            grammarPoint: question.grammarPoint,
+            difficultyLevel: wa.difficultyLevel ?? 1, // Keep existing level or default to 1
+          );
+          enrichedWrongAnswers.add(enrichedWa);
+          print('    ✅ Enriched successfully');
+        } else {
+          print('    ❌ Question not found in database');
+          enrichedWrongAnswers.add(wa); // Keep original if question not found
+        }
+      } catch (e) {
+        print('    ❌ Error enriching question: $e');
+        enrichedWrongAnswers.add(wa); // Keep original if error occurs
+      }
+    } else {
+      enrichedWrongAnswers.add(wa); // Already has data
+    }
+  }
+
+  print('📚 wrongAnswersProvider: Returning ${enrichedWrongAnswers.length} enriched wrong answers');
+  return enrichedWrongAnswers;
 });
 
 final wrongAnswersNeedingReviewProvider =

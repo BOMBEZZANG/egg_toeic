@@ -17,7 +17,10 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      return web;
+      throw UnsupportedError(
+        'DefaultFirebaseOptions have not been configured for web - '
+        'you can reconfigure this by running the FlutterFire CLI again.',
+      );
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -25,9 +28,15 @@ class DefaultFirebaseOptions {
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
-        return macos;
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for macos - '
+          'you can reconfigure this by running the FlutterFire CLI again.',
+        );
       case TargetPlatform.windows:
-        return windows;
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for windows - '
+          'you can reconfigure this by running the FlutterFire CLI again.',
+        );
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -40,49 +49,21 @@ class DefaultFirebaseOptions {
     }
   }
 
-  static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyC9WpvkEuY3F4-D4mjXqdNIaWt9V2zO5FM',
-    appId: '1:460976305272:web:1284101687ae54a4df298d',
-    messagingSenderId: '460976305272',
-    projectId: 'eggtoeic-9c88f',
-    authDomain: 'eggtoeic-9c88f.firebaseapp.com',
-    storageBucket: 'eggtoeic-9c88f.firebasestorage.app',
-    measurementId: 'G-05GDE4JCF1',
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyCZwjMbKnKJRAm-MNt1HcW9WpLhVjb-3FM',
+    appId: '1:1093298457435:ios:5aa3108734e5b7b2bc687e',
+    messagingSenderId: '1093298457435',
+    projectId: 'toeiceggadmin',
+    storageBucket: 'toeiceggadmin.firebasestorage.app',
+    iosBundleId: 'com.example.eggToeic',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyB_hrgT7uGsTE_R35cMFFHrD3_wkMcKa4U',
-    appId: '1:460976305272:android:b3054ca1e5c4dad0df298d',
-    messagingSenderId: '460976305272',
-    projectId: 'eggtoeic-9c88f',
-    storageBucket: 'eggtoeic-9c88f.firebasestorage.app',
+    apiKey: 'AIzaSyB14bHCgPfoYvvuY6okqRvYl08UaWangdc',
+    appId: '1:1093298457435:android:5d89886038353650bc687e',
+    messagingSenderId: '1093298457435',
+    projectId: 'toeiceggadmin',
+    storageBucket: 'toeiceggadmin.firebasestorage.app',
   );
 
-  static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDN3B76Ts5GAt64d3vByehgYmj94SQyJLc',
-    appId: '1:460976305272:ios:0600d9b502cc7870df298d',
-    messagingSenderId: '460976305272',
-    projectId: 'eggtoeic-9c88f',
-    storageBucket: 'eggtoeic-9c88f.firebasestorage.app',
-    iosBundleId: 'com.example.eggToeic',
-  );
-
-  static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyDN3B76Ts5GAt64d3vByehgYmj94SQyJLc',
-    appId: '1:460976305272:ios:0600d9b502cc7870df298d',
-    messagingSenderId: '460976305272',
-    projectId: 'eggtoeic-9c88f',
-    storageBucket: 'eggtoeic-9c88f.firebasestorage.app',
-    iosBundleId: 'com.example.eggToeic',
-  );
-
-  static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyC9WpvkEuY3F4-D4mjXqdNIaWt9V2zO5FM',
-    appId: '1:460976305272:web:67130e0ff9d602bbdf298d',
-    messagingSenderId: '460976305272',
-    projectId: 'eggtoeic-9c88f',
-    authDomain: 'eggtoeic-9c88f.firebaseapp.com',
-    storageBucket: 'eggtoeic-9c88f.firebasestorage.app',
-    measurementId: 'G-VN5JH0RXR7',
-  );
 }

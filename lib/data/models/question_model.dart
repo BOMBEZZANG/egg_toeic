@@ -113,16 +113,51 @@ class Question extends Equatable {
         isBookmarked,
       ];
 
+  static List<String>? _extractTags(dynamic tagsData) {
+    if (tagsData == null) return null;
+    if (tagsData is List) {
+      return List<String>.from(tagsData);
+    } else if (tagsData is Map) {
+      final tagsMap = tagsData as Map<String, dynamic>;
+      final sortedKeys = tagsMap.keys.toList()..sort();
+      return sortedKeys.map((key) => tagsMap[key].toString()).toList();
+    } else if (tagsData is String) {
+      return [tagsData];
+    }
+    return null;
+  }
+
   factory Question.fromFirestore(Map<String, dynamic> data, String id) {
+    // Handle options field that can be either List or Map format
+    List<String> optionsList = [];
+    final optionsData = data['options'];
+
+    if (optionsData is List) {
+      // Handle List format: ["option1", "option2", "option3", "option4"]
+      optionsList = List<String>.from(optionsData);
+    } else if (optionsData is Map) {
+      // Handle Map format: {"0": "option1", "1": "option2", "2": "option3", "3": "option4"}
+      final optionsMap = optionsData as Map<String, dynamic>;
+      // Sort by key to maintain order (0, 1, 2, 3)
+      final sortedKeys = optionsMap.keys.toList()..sort();
+      optionsList = sortedKeys.map((key) => optionsMap[key].toString()).toList();
+    } else if (optionsData is String) {
+      // Handle single string - split by common delimiters
+      optionsList = optionsData.split('\n').where((s) => s.trim().isNotEmpty).toList();
+    } else {
+      print('⚠️ Unknown options format for question $id: ${optionsData.runtimeType}');
+      optionsList = ['Option A', 'Option B', 'Option C', 'Option D']; // Fallback
+    }
+
     return Question(
       id: id,
       questionText: data['questionText'] as String,
-      options: List<String>.from(data['options'] as List),
+      options: optionsList,
       correctAnswerIndex: data['correctAnswerIndex'] as int,
       difficultyLevel: data['difficultyLevel'] as int,
       explanation: data['explanation'] as String,
       grammarPoint: data['grammarPoint'] as String,
-      tags: data['tags'] != null ? List<String>.from(data['tags']) : null,
+      tags: _extractTags(data['tags']),
       createdAt: data['createdAt'] != null
           ? DateTime.parse(data['createdAt'] as String)
           : DateTime.now(),

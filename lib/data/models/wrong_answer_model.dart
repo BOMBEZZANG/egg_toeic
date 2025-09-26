@@ -32,6 +32,14 @@ class WrongAnswer extends Equatable {
   final String? questionText;
   @HiveField(11)
   final List<String>? options;
+  @HiveField(12)
+  final String? modeType; // 'practice' or 'exam'
+  @HiveField(13)
+  final String? category; // 'grammar' or 'vocabulary'
+  @HiveField(14)
+  final List<String>? tags;
+  @HiveField(15)
+  final String? explanation;
 
   const WrongAnswer({
     required this.id,
@@ -46,6 +54,10 @@ class WrongAnswer extends Equatable {
     this.lastReviewedAt,
     this.questionText,
     this.options,
+    this.modeType,
+    this.category,
+    this.tags,
+    this.explanation,
   });
 
   factory WrongAnswer.fromJson(Map<String, dynamic> json) {
@@ -66,6 +78,12 @@ class WrongAnswer extends Equatable {
       options: json['options'] != null
           ? List<String>.from(json['options'] as List)
           : null,
+      modeType: json['modeType'] as String?,
+      category: json['category'] as String?,
+      tags: json['tags'] != null
+          ? List<String>.from(json['tags'] as List)
+          : null,
+      explanation: json['explanation'] as String?,
     );
   }
 
@@ -83,6 +101,10 @@ class WrongAnswer extends Equatable {
       'lastReviewedAt': lastReviewedAt?.toIso8601String(),
       'questionText': questionText,
       'options': options,
+      'modeType': modeType,
+      'category': category,
+      'tags': tags,
+      'explanation': explanation,
     };
   }
 
@@ -94,6 +116,10 @@ class WrongAnswer extends Equatable {
     int? difficultyLevel,
     String? questionText,
     List<String>? options,
+    String? modeType,
+    String? category,
+    List<String>? tags,
+    String? explanation,
   }) {
     return WrongAnswer(
       id: const Uuid().v4(),
@@ -105,6 +131,10 @@ class WrongAnswer extends Equatable {
       difficultyLevel: difficultyLevel,
       questionText: questionText,
       options: options,
+      modeType: modeType,
+      category: category,
+      tags: tags,
+      explanation: explanation,
     );
   }
 
@@ -152,6 +182,10 @@ class WrongAnswer extends Equatable {
     DateTime? lastReviewedAt,
     String? questionText,
     List<String>? options,
+    String? modeType,
+    String? category,
+    List<String>? tags,
+    String? explanation,
   }) {
     return WrongAnswer(
       id: id ?? this.id,
@@ -166,6 +200,10 @@ class WrongAnswer extends Equatable {
       lastReviewedAt: lastReviewedAt ?? this.lastReviewedAt,
       questionText: questionText ?? this.questionText,
       options: options ?? this.options,
+      modeType: modeType ?? this.modeType,
+      category: category ?? this.category,
+      tags: tags ?? this.tags,
+      explanation: explanation ?? this.explanation,
     );
   }
 
@@ -183,5 +221,9 @@ class WrongAnswer extends Equatable {
         lastReviewedAt,
         questionText,
         options,
+        modeType,
+        category,
+        tags,
+        explanation,
       ];
 }

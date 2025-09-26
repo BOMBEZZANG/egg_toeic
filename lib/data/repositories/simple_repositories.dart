@@ -35,6 +35,7 @@ class SimpleQuestionRepositoryImpl implements QuestionRepository {
   Future<List<SimpleQuestion>> getQuestions({
     required int difficultyLevel,
     int limit = 10,
+    String mode = 'practice',
   }) async {
     // Return sample questions for now
     return [
@@ -60,8 +61,8 @@ class SimpleQuestionRepositoryImpl implements QuestionRepository {
   }
 
   @override
-  Future<SimpleQuestion?> getQuestionById(String questionId) async {
-    final questions = await getQuestions(difficultyLevel: 1, limit: 100);
+  Future<SimpleQuestion?> getQuestionById(String questionId, {String mode = 'practice'}) async {
+    final questions = await getQuestions(difficultyLevel: 1, limit: 100, mode: mode);
     try {
       return questions.firstWhere((q) => q.id == questionId);
     } catch (_) {
@@ -70,10 +71,10 @@ class SimpleQuestionRepositoryImpl implements QuestionRepository {
   }
 
   @override
-  Future<List<SimpleQuestion>> getQuestionsByIds(List<String> questionIds) async {
+  Future<List<SimpleQuestion>> getQuestionsByIds(List<String> questionIds, {String mode = 'practice'}) async {
     final result = <SimpleQuestion>[];
     for (final id in questionIds) {
-      final question = await getQuestionById(id);
+      final question = await getQuestionById(id, mode: mode);
       if (question != null) {
         result.add(question);
       }
@@ -85,10 +86,12 @@ class SimpleQuestionRepositoryImpl implements QuestionRepository {
   Future<List<SimpleQuestion>> getRandomQuestions({
     int? difficultyLevel,
     int limit = 10,
+    String mode = 'practice',
   }) async {
     final questions = await getQuestions(
       difficultyLevel: difficultyLevel ?? 1,
       limit: limit,
+      mode: mode,
     );
     questions.shuffle();
     return questions;
@@ -102,6 +105,128 @@ class SimpleQuestionRepositoryImpl implements QuestionRepository {
   @override
   Future<List<SimpleQuestion>> getCachedQuestions() async {
     return _cachedQuestions;
+  }
+
+  @override
+  Future<Map<String, List<Question>>> getPracticeSessionsByDate({
+    DateTime? startDate,
+    DateTime? endDate,
+    int? limit,
+  }) async {
+    // Return mock data for simple repository
+    final now = DateTime.now();
+    final sessions = <String, List<Question>>{};
+
+    // Generate mock sessions for last 7 days
+    for (int i = 0; i < 7; i++) {
+      final date = now.subtract(Duration(days: i));
+      final dateString = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+      // Create mock questions for this date
+      sessions[dateString] = [
+        SimpleQuestion(
+          id: 'mock_${dateString}_1',
+          questionText: 'Mock question for $dateString - The meeting _____ scheduled for 3 PM.',
+          options: ['is', 'are', 'were', 'be'],
+          correctAnswerIndex: 0,
+          difficultyLevel: 1,
+          explanation: 'Mock explanation for demonstration.',
+          grammarPoint: 'Subject-Verb Agreement',
+          createdAt: date,
+        ),
+      ];
+    }
+
+    return sessions;
+  }
+
+  @override
+  Future<List<String>> getAvailablePracticeDates() async {
+    // Return mock available dates
+    final now = DateTime.now();
+    final dates = <String>[];
+
+    // Generate mock dates for last 7 days
+    for (int i = 0; i < 7; i++) {
+      final date = now.subtract(Duration(days: i));
+      final dateString = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      dates.add(dateString);
+    }
+
+    return dates;
+  }
+
+  @override
+  Future<List<Question>> getPracticeQuestionsByDate(String date) async {
+    // Return mock questions for the specified date
+    return [
+      SimpleQuestion(
+        id: 'mock_${date}_1',
+        questionText: 'Mock question for $date - The meeting _____ scheduled for 3 PM.',
+        options: ['is', 'are', 'were', 'be'],
+        correctAnswerIndex: 0,
+        difficultyLevel: 1,
+        explanation: 'Mock explanation for demonstration.',
+        grammarPoint: 'Subject-Verb Agreement',
+        createdAt: DateTime.parse(date),
+      ),
+      SimpleQuestion(
+        id: 'mock_${date}_2',
+        questionText: 'Mock question for $date - She _____ to the office every day.',
+        options: ['go', 'goes', 'going', 'gone'],
+        correctAnswerIndex: 1,
+        difficultyLevel: 1,
+        explanation: 'Third person singular requires "goes".',
+        grammarPoint: 'Subject-Verb Agreement',
+        createdAt: DateTime.parse(date),
+      ),
+    ];
+  }
+
+  @override
+  Future<List<String>> getAvailableExamRounds() async {
+    // Return mock available exam rounds based on realistic test numbers
+    return ['ROUND_1', 'ROUND_2', 'ROUND_3'];
+  }
+
+  @override
+  Future<List<Question>> getExamQuestionsByRound(String round) async {
+    // Extract test number from round (ROUND_1 -> 1, ROUND_2 -> 2)
+    final testNumber = int.tryParse(round.replaceAll('ROUND_', '')) ?? 1;
+
+    // Generate mock questions with realistic IDs that include test number
+    return [
+      SimpleQuestion(
+        id: 'EXAM_T${testNumber}_L1_GRAM_Q${DateTime.now().millisecondsSinceEpoch}_0',
+        questionText: 'Mock question for $round - The company _____ expanding rapidly.',
+        options: ['is', 'are', 'was', 'were'],
+        correctAnswerIndex: 0,
+        difficultyLevel: 1,
+        explanation: 'The company is singular, so "is" is correct.',
+        grammarPoint: 'Subject-Verb Agreement',
+        createdAt: DateTime.now(),
+      ),
+      SimpleQuestion(
+        id: 'EXAM_T${testNumber}_L2_VOC_Q${DateTime.now().millisecondsSinceEpoch + 1}_0',
+        questionText: 'Mock question for $round - He _____ finished the report yet.',
+        options: ['has not', 'have not', 'did not', 'will not'],
+        correctAnswerIndex: 0,
+        difficultyLevel: 2,
+        explanation: 'Present perfect with "yet" requires "has not".',
+        grammarPoint: 'Present Perfect',
+        createdAt: DateTime.now(),
+      ),
+      SimpleQuestion(
+        id: 'EXAM_T${testNumber}_L3_GRAM_Q${DateTime.now().millisecondsSinceEpoch + 2}_0',
+        questionText: 'Mock question for $round - The proposal _____ reviewed by the board.',
+        options: ['will be', 'would be', 'has been', 'is being'],
+        correctAnswerIndex: 0,
+        difficultyLevel: 3,
+        explanation: 'Future passive voice is correct here.',
+        grammarPoint: 'Passive Voice',
+        createdAt: DateTime.now(),
+      ),
+    ];
   }
 }
 
