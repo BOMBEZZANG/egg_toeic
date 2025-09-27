@@ -32,12 +32,41 @@ class WrongAnswerFilters {
     String? tag,
   }) {
     return WrongAnswerFilters(
-      modeType: modeType,
-      level: level,
-      category: category,
-      tag: tag,
+      modeType: modeType ?? this.modeType,
+      level: level ?? this.level,
+      category: category ?? this.category,
+      tag: tag ?? this.tag,
     );
   }
+
+  // Helper method to explicitly set a field to null
+  WrongAnswerFilters clearModeType() => WrongAnswerFilters(
+    modeType: null,
+    level: level,
+    category: category,
+    tag: tag,
+  );
+
+  WrongAnswerFilters clearLevel() => WrongAnswerFilters(
+    modeType: modeType,
+    level: null,
+    category: category,
+    tag: tag,
+  );
+
+  WrongAnswerFilters clearCategory() => WrongAnswerFilters(
+    modeType: modeType,
+    level: level,
+    category: null,
+    tag: tag,
+  );
+
+  WrongAnswerFilters clearTag() => WrongAnswerFilters(
+    modeType: modeType,
+    level: level,
+    category: category,
+    tag: null,
+  );
 
   bool get hasActiveFilters =>
       modeType != null || level != null || category != null || tag != null;
@@ -226,10 +255,12 @@ class WrongAnswersScreen extends ConsumerWidget {
                   ref.watch(wrongAnswerFiltersProvider).modeType,
                   ['practice', 'exam'],
                   ['연습모드', '시험모드'],
-                  (value) =>
-                      ref.read(wrongAnswerFiltersProvider.notifier).state = ref
-                          .read(wrongAnswerFiltersProvider)
-                          .copyWith(modeType: value),
+                  (value) {
+                    print('🔽 Type filter selected: $value');
+                    ref.read(wrongAnswerFiltersProvider.notifier).state = (value == null || value == '__ALL__')
+                        ? ref.read(wrongAnswerFiltersProvider).clearModeType()
+                        : ref.read(wrongAnswerFiltersProvider).copyWith(modeType: value);
+                  },
                 ),
                 const SizedBox(width: 8),
                 _buildFilterChip(
@@ -239,11 +270,12 @@ class WrongAnswersScreen extends ConsumerWidget {
                   ref.watch(wrongAnswerFiltersProvider).level?.toString(),
                   ['1', '2', '3', '4', '5'],
                   ['1', '2', '3', '4', '5'],
-                  (value) =>
-                      ref.read(wrongAnswerFiltersProvider.notifier).state = ref
-                          .read(wrongAnswerFiltersProvider)
-                          .copyWith(
-                              level: value != null ? int.parse(value) : null),
+                  (value) {
+                    print('🔽 Level filter selected: $value');
+                    ref.read(wrongAnswerFiltersProvider.notifier).state = (value == null || value == '__ALL__')
+                        ? ref.read(wrongAnswerFiltersProvider).clearLevel()
+                        : ref.read(wrongAnswerFiltersProvider).copyWith(level: int.parse(value));
+                  },
                 ),
                 const SizedBox(width: 8),
                 _buildFilterChip(
@@ -253,10 +285,12 @@ class WrongAnswersScreen extends ConsumerWidget {
                   ref.watch(wrongAnswerFiltersProvider).category,
                   ['grammar', 'vocabulary'],
                   ['문법', '어휘'],
-                  (value) =>
-                      ref.read(wrongAnswerFiltersProvider.notifier).state = ref
-                          .read(wrongAnswerFiltersProvider)
-                          .copyWith(category: value),
+                  (value) {
+                    print('🔽 Category filter selected: $value');
+                    ref.read(wrongAnswerFiltersProvider.notifier).state = (value == null || value == '__ALL__')
+                        ? ref.read(wrongAnswerFiltersProvider).clearCategory()
+                        : ref.read(wrongAnswerFiltersProvider).copyWith(category: value);
+                  },
                 ),
                 const SizedBox(width: 8),
                 _buildTagFilter(context, ref, wrongAnswers),
@@ -277,6 +311,20 @@ class WrongAnswersScreen extends ConsumerWidget {
     List<String> displayNames,
     Function(String?) onChanged,
   ) {
+    // Get the appropriate Korean text for "All" options
+    String getAllText() {
+      switch (label) {
+        case 'Type':
+          return '전체 모드';
+        case 'Level':
+          return '전체 레벨';
+        case 'Category':
+          return '전체 카테고리';
+        default:
+          return 'All ${label}s';
+      }
+    }
+
     return PopupMenuButton<String?>(
       child: Container(
         padding: const EdgeInsets.symmetric(
@@ -300,7 +348,7 @@ class WrongAnswersScreen extends ConsumerWidget {
             Text(
               currentValue != null
                   ? displayNames[values.indexOf(currentValue)]
-                  : label,
+                  : getAllText(),
               style: TextStyle(
                 color: currentValue != null
                     ? AppColors.primaryColor
@@ -322,12 +370,45 @@ class WrongAnswersScreen extends ConsumerWidget {
       ),
       itemBuilder: (context) => [
         PopupMenuItem<String?>(
-          value: null,
-          child: Text('All ${label}s'),
+          value: '__ALL__', // Use special value instead of null to ensure callback triggers
+          child: Row(
+            children: [
+              Icon(
+                Icons.clear_all,
+                size: 16,
+                color: AppColors.textSecondary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                getAllText(),
+                style: TextStyle(
+                  color: currentValue == null ? AppColors.primaryColor : AppColors.textPrimary,
+                  fontWeight: currentValue == null ? FontWeight.w500 : FontWeight.normal,
+                ),
+              ),
+            ],
+          ),
         ),
+        const PopupMenuDivider(),
         ...values.asMap().entries.map((entry) => PopupMenuItem<String>(
               value: entry.value,
-              child: Text(displayNames[entry.key]),
+              child: Row(
+                children: [
+                  Icon(
+                    currentValue == entry.value ? Icons.check : Icons.radio_button_unchecked,
+                    size: 16,
+                    color: currentValue == entry.value ? AppColors.primaryColor : AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    displayNames[entry.key],
+                    style: TextStyle(
+                      color: currentValue == entry.value ? AppColors.primaryColor : AppColors.textPrimary,
+                      fontWeight: currentValue == entry.value ? FontWeight.w500 : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
             )),
       ],
       onSelected: onChanged,
@@ -366,7 +447,7 @@ class WrongAnswersScreen extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              ref.watch(wrongAnswerFiltersProvider).tag ?? 'Tags',
+              ref.watch(wrongAnswerFiltersProvider).tag ?? '전체 태그',
               style: TextStyle(
                 color: ref.watch(wrongAnswerFiltersProvider).tag != null
                     ? AppColors.primaryColor
@@ -388,18 +469,54 @@ class WrongAnswersScreen extends ConsumerWidget {
         ),
       ),
       itemBuilder: (context) => [
-        const PopupMenuItem<String?>(
-          value: null,
-          child: Text('All Tags'),
+        PopupMenuItem<String?>(
+          value: '__ALL__',
+          child: Row(
+            children: [
+              Icon(
+                Icons.clear_all,
+                size: 16,
+                color: AppColors.textSecondary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '전체 태그',
+                style: TextStyle(
+                  color: ref.watch(wrongAnswerFiltersProvider).tag == null ? AppColors.primaryColor : AppColors.textPrimary,
+                  fontWeight: ref.watch(wrongAnswerFiltersProvider).tag == null ? FontWeight.w500 : FontWeight.normal,
+                ),
+              ),
+            ],
+          ),
         ),
+        if (allTags.isNotEmpty) const PopupMenuDivider(),
         ...allTags.map((tag) => PopupMenuItem<String>(
               value: tag,
-              child: Text(tag),
+              child: Row(
+                children: [
+                  Icon(
+                    ref.watch(wrongAnswerFiltersProvider).tag == tag ? Icons.check : Icons.radio_button_unchecked,
+                    size: 16,
+                    color: ref.watch(wrongAnswerFiltersProvider).tag == tag ? AppColors.primaryColor : AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    tag,
+                    style: TextStyle(
+                      color: ref.watch(wrongAnswerFiltersProvider).tag == tag ? AppColors.primaryColor : AppColors.textPrimary,
+                      fontWeight: ref.watch(wrongAnswerFiltersProvider).tag == tag ? FontWeight.w500 : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
             )),
       ],
-      onSelected: (value) => ref
-          .read(wrongAnswerFiltersProvider.notifier)
-          .state = ref.read(wrongAnswerFiltersProvider).copyWith(tag: value),
+      onSelected: (value) {
+        print('🔽 Tag filter selected: $value');
+        ref.read(wrongAnswerFiltersProvider.notifier).state = (value == null || value == '__ALL__')
+            ? ref.read(wrongAnswerFiltersProvider).clearTag()
+            : ref.read(wrongAnswerFiltersProvider).copyWith(tag: value);
+      },
     );
   }
 

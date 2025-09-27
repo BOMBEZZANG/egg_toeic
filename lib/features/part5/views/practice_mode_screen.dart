@@ -57,7 +57,8 @@ class _PracticeModeScreenState extends ConsumerState<PracticeModeScreen>
 
   void _loadQuestions() async {
     try {
-      print('Loading questions for difficulty level: ${widget.difficultyLevel}');
+      print(
+          'Loading questions for difficulty level: ${widget.difficultyLevel}');
       final questionRepo = ref.read(questionRepositoryProvider);
       final questions = await questionRepo.getQuestions(
         difficultyLevel: widget.difficultyLevel,
@@ -66,7 +67,8 @@ class _PracticeModeScreenState extends ConsumerState<PracticeModeScreen>
       );
       print('Loaded ${questions.length} questions');
       if (questions.isEmpty) {
-        print('No questions found for difficulty level ${widget.difficultyLevel}');
+        print(
+            'No questions found for difficulty level ${widget.difficultyLevel}');
       }
       setState(() {
         _questions = questions;
@@ -156,23 +158,89 @@ class _PracticeModeScreenState extends ConsumerState<PracticeModeScreen>
                 'Question ${_currentQuestionIndex + 1} of ${_questions.length}',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  'Level ${widget.difficultyLevel}',
-                  style: TextStyle(
-                    color: AppColors.primaryColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Bookmark icon
+                  Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    child: Consumer(
+                      builder: (context, ref, child) {
+                        final question = _questions[_currentQuestionIndex];
+                        final favoritesAsync = ref.watch(favoritesProvider);
+
+                        return favoritesAsync.when(
+                          data: (favorites) {
+                            final isBookmarked =
+                                favorites.contains(question.id);
+                            return IconButton(
+                              onPressed: () =>
+                                  _toggleBookmark(ref, question.id),
+                              icon: Icon(
+                                isBookmarked
+                                    ? Icons.bookmark
+                                    : Icons.bookmark_border,
+                                color: isBookmarked
+                                    ? AppColors.accentColor
+                                    : AppColors.textSecondary,
+                                size: 20,
+                              ),
+                              tooltip: isBookmarked ? '즐겨찾기 해제' : '즐겨찾기 추가',
+                              constraints: const BoxConstraints(
+                                minWidth: 32,
+                                minHeight: 32,
+                              ),
+                              padding: EdgeInsets.zero,
+                            );
+                          },
+                          loading: () => const SizedBox(
+                            width: 32,
+                            height: 32,
+                            child: Center(
+                              child: SizedBox(
+                                width: 16,
+                                height: 16,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            ),
+                          ),
+                          error: (_, __) => IconButton(
+                            onPressed: () => _toggleBookmark(ref, question.id),
+                            icon: Icon(
+                              Icons.bookmark_border,
+                              color: AppColors.textSecondary,
+                              size: 20,
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 32,
+                              minHeight: 32,
+                            ),
+                            padding: EdgeInsets.zero,
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'Level ${widget.difficultyLevel}',
+                      style: TextStyle(
+                        color: AppColors.primaryColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -202,7 +270,7 @@ class _PracticeModeScreenState extends ConsumerState<PracticeModeScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Question Number & Grammar Point
+            // Question Number, Grammar Point & Bookmark
             Row(
               children: [
                 Container(
@@ -229,6 +297,77 @@ class _PracticeModeScreenState extends ConsumerState<PracticeModeScreen>
                     style: const TextStyle(fontSize: 12),
                   ),
                   backgroundColor: Colors.grey[200],
+                ),
+                const Spacer(),
+                // Bookmark icon in question card
+                Consumer(
+                  builder: (context, ref, child) {
+                    final favoritesAsync = ref.watch(favoritesProvider);
+
+                    return favoritesAsync.when(
+                      data: (favorites) {
+                        final isBookmarked = favorites.contains(question.id);
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: isBookmarked
+                                ? AppColors.accentColor.withOpacity(0.1)
+                                : Colors.grey[100],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: IconButton(
+                            onPressed: () => _toggleBookmark(ref, question.id),
+                            icon: Icon(
+                              isBookmarked
+                                  ? Icons.bookmark
+                                  : Icons.bookmark_border,
+                              color: isBookmarked
+                                  ? AppColors.accentColor
+                                  : AppColors.textSecondary,
+                              size: 24,
+                            ),
+                            tooltip: isBookmarked ? 'Remove from favorites' : 'Add to favorites',
+                            constraints: const BoxConstraints(
+                              minWidth: 44,
+                              minHeight: 44,
+                            ),
+                          ),
+                        );
+                      },
+                      loading: () => Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Center(
+                          child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      ),
+                      error: (_, __) => Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: IconButton(
+                          onPressed: () => _toggleBookmark(ref, question.id),
+                          icon: Icon(
+                            Icons.bookmark_border,
+                            color: AppColors.textSecondary,
+                            size: 24,
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 44,
+                            minHeight: 44,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -300,6 +439,10 @@ class _PracticeModeScreenState extends ConsumerState<PracticeModeScreen>
                         height: 1.5,
                       ),
                     ),
+                    const SizedBox(height: 16),
+
+                    // Useful Tags Section
+                    _buildUsefulTags(question),
                   ],
                 ),
               ),
@@ -397,7 +540,8 @@ class _PracticeModeScreenState extends ConsumerState<PracticeModeScreen>
               if (icon != null)
                 Icon(
                   icon,
-                  color: isCorrect ? AppColors.successColor : AppColors.errorColor,
+                  color:
+                      isCorrect ? AppColors.successColor : AppColors.errorColor,
                   size: 24,
                 ),
             ],
@@ -430,8 +574,11 @@ class _PracticeModeScreenState extends ConsumerState<PracticeModeScreen>
                     _showExplanation = !_showExplanation;
                   });
                 },
-                icon: Icon(_showExplanation ? Icons.visibility_off : Icons.lightbulb_outline),
-                label: Text(_showExplanation ? 'Hide Explanation' : 'Show Explanation'),
+                icon: Icon(_showExplanation
+                    ? Icons.visibility_off
+                    : Icons.lightbulb_outline),
+                label: Text(
+                    _showExplanation ? 'Hide Explanation' : 'Show Explanation'),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
@@ -445,7 +592,9 @@ class _PracticeModeScreenState extends ConsumerState<PracticeModeScreen>
               child: ElevatedButton.icon(
                 onPressed: _nextQuestion,
                 icon: const Icon(Icons.arrow_forward),
-                label: Text(_currentQuestionIndex < _questions.length - 1 ? 'Next' : 'Finish'),
+                label: Text(_currentQuestionIndex < _questions.length - 1
+                    ? 'Next'
+                    : 'Finish'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryColor,
                   foregroundColor: Colors.white,
@@ -508,12 +657,49 @@ class _PracticeModeScreenState extends ConsumerState<PracticeModeScreen>
     }
   }
 
+  void _toggleBookmark(WidgetRef ref, String questionId) async {
+    try {
+      await ref.read(userDataRepositoryProvider).toggleFavorite(questionId);
+
+      // Refresh favorites provider
+      ref.invalidate(favoritesProvider);
+
+      if (mounted) {
+        final isBookmarked =
+            await ref.read(userDataRepositoryProvider).isFavorite(questionId);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:
+                Text(isBookmarked ? '즐겨찾기에 추가되었습니다! 📚' : '즐겨찾기에서 제거되었습니다'),
+            backgroundColor:
+                isBookmarked ? AppColors.successColor : AppColors.textSecondary,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error toggling bookmark: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('즐겨찾기 처리 중 오류가 발생했습니다'),
+            backgroundColor: AppColors.errorColor,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _saveWrongAnswer(SimpleQuestion question) async {
     try {
-      print('🔍 Saving wrong answer for level ${widget.difficultyLevel} question:');
+      print(
+          '🔍 Saving wrong answer for level ${widget.difficultyLevel} question:');
       print('  - Question ID: ${question.id}');
-      print('  - Question Text: "${question.questionText}" (length: ${question.questionText.length})');
-      print('  - Options: ${question.options} (count: ${question.options.length})');
+      print(
+          '  - Question Text: "${question.questionText}" (length: ${question.questionText.length})');
+      print(
+          '  - Options: ${question.options} (count: ${question.options.length})');
       print('  - Grammar Point: "${question.grammarPoint}"');
 
       final wrongAnswer = WrongAnswer.create(
@@ -531,8 +717,10 @@ class _PracticeModeScreenState extends ConsumerState<PracticeModeScreen>
       );
 
       print('  ✅ BEFORE SAVE: WrongAnswer data:');
-      print('    - questionText: "${wrongAnswer.questionText}" (null: ${wrongAnswer.questionText == null})');
-      print('    - options: ${wrongAnswer.options} (null: ${wrongAnswer.options == null})');
+      print(
+          '    - questionText: "${wrongAnswer.questionText}" (null: ${wrongAnswer.questionText == null})');
+      print(
+          '    - options: ${wrongAnswer.options} (null: ${wrongAnswer.options == null})');
 
       final repository = ref.read(userDataRepositoryProvider);
       await repository.addWrongAnswer(wrongAnswer);
@@ -546,8 +734,23 @@ class _PracticeModeScreenState extends ConsumerState<PracticeModeScreen>
 
   String _getCategoryFromGrammarPoint(String grammarPoint) {
     // Simple categorization logic - you can enhance this
-    final vocabularyKeywords = ['vocabulary', 'word', 'meaning', 'synonym', 'antonym'];
-    final grammarKeywords = ['tense', 'verb', 'noun', 'adjective', 'adverb', 'preposition', 'conjunction', 'article'];
+    final vocabularyKeywords = [
+      'vocabulary',
+      'word',
+      'meaning',
+      'synonym',
+      'antonym'
+    ];
+    final grammarKeywords = [
+      'tense',
+      'verb',
+      'noun',
+      'adjective',
+      'adverb',
+      'preposition',
+      'conjunction',
+      'article'
+    ];
 
     final lowerPoint = grammarPoint.toLowerCase();
 
@@ -572,6 +775,54 @@ class _PracticeModeScreenState extends ConsumerState<PracticeModeScreen>
     }
 
     return tags.take(3).toList(); // Limit to 3 tags
+  }
+
+  Widget _buildUsefulTags(SimpleQuestion question) {
+    final tags = _extractTagsFromGrammarPoint(question.grammarPoint);
+
+    if (tags.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Related Topics:',
+          style: TextStyle(
+            color: AppColors.primaryColor,
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: tags.map((tag) => Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 6,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.primaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: AppColors.primaryColor.withOpacity(0.3),
+              ),
+            ),
+            child: Text(
+              tag,
+              style: TextStyle(
+                color: AppColors.primaryColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          )).toList(),
+        ),
+      ],
+    );
   }
 
   void _nextQuestion() {
@@ -617,7 +868,8 @@ class _PracticeModeScreenState extends ConsumerState<PracticeModeScreen>
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: const Text('Session Complete!'),
-        content: const Text('Congratulations! You have completed this practice session.'),
+        content: const Text(
+            'Congratulations! You have completed this practice session.'),
         actions: [
           TextButton(
             onPressed: () {

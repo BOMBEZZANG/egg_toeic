@@ -338,7 +338,7 @@ class _PracticeDateModeScreenState extends ConsumerState<PracticeDateModeScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Question text
+                    // Question text with bookmark
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
@@ -353,13 +353,114 @@ class _PracticeDateModeScreenState extends ConsumerState<PracticeDateModeScreen>
                           ),
                         ],
                       ),
-                      child: Text(
-                        currentQuestion.questionText,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500,
-                          height: 1.5,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Header with question number and bookmark
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryColor.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  'Q${_currentQuestionIndex + 1}',
+                                  style: const TextStyle(
+                                    color: AppColors.primaryColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                              const Spacer(),
+                              // Bookmark icon in question card
+                              Consumer(
+                                builder: (context, ref, child) {
+                                  final favoritesAsync = ref.watch(favoritesProvider);
+
+                                  return favoritesAsync.when(
+                                    data: (favorites) {
+                                      final isBookmarked = favorites.contains(currentQuestion.id);
+                                      return Container(
+                                        decoration: BoxDecoration(
+                                          color: isBookmarked
+                                              ? AppColors.accentColor.withOpacity(0.1)
+                                              : Colors.grey[100],
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: IconButton(
+                                          onPressed: () => _toggleBookmark(ref, currentQuestion.id),
+                                          icon: Icon(
+                                            isBookmarked
+                                                ? Icons.bookmark
+                                                : Icons.bookmark_border,
+                                            color: isBookmarked
+                                                ? AppColors.accentColor
+                                                : AppColors.textSecondary,
+                                            size: 22,
+                                          ),
+                                          tooltip: isBookmarked ? 'Remove from favorites' : 'Add to favorites',
+                                          constraints: const BoxConstraints(
+                                            minWidth: 40,
+                                            minHeight: 40,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    loading: () => Container(
+                                      width: 40,
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[100],
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Center(
+                                        child: SizedBox(
+                                          width: 14,
+                                          height: 14,
+                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                        ),
+                                      ),
+                                    ),
+                                    error: (_, __) => Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[100],
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: IconButton(
+                                        onPressed: () => _toggleBookmark(ref, currentQuestion.id),
+                                        icon: Icon(
+                                          Icons.bookmark_border,
+                                          color: AppColors.textSecondary,
+                                          size: 22,
+                                        ),
+                                        constraints: const BoxConstraints(
+                                          minWidth: 40,
+                                          minHeight: 40,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          // Question text
+                          Text(
+                            currentQuestion.questionText,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w500,
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
 
@@ -376,12 +477,39 @@ class _PracticeDateModeScreenState extends ConsumerState<PracticeDateModeScreen>
                           return isSelected ? AppColors.primaryColor : Colors.white;
                         }
 
+                        // After answer is submitted
+                        if (isCorrect) {
+                          return AppColors.successColor; // Green for correct answer
+                        } else if (isSelected && !isCorrect) {
+                          return AppColors.errorColor; // Red for wrong selected answer
+                        }
+                        return Colors.grey[50]!; // Very light grey for unselected options (keep them visible)
+                      }
+
+                      Color getBorderColor() {
+                        if (!showResult) {
+                          return isSelected ? AppColors.primaryColor : Colors.grey[300]!;
+                        }
+
+                        // After answer is submitted
                         if (isCorrect) {
                           return AppColors.successColor;
                         } else if (isSelected && !isCorrect) {
                           return AppColors.errorColor;
                         }
-                        return Colors.white;
+                        return Colors.grey[300]!; // Light border for unselected options
+                      }
+
+                      Color getTextColor() {
+                        if (!showResult) {
+                          return isSelected ? Colors.white : Colors.black87;
+                        }
+
+                        // After answer is submitted
+                        if (isCorrect || (isSelected && !isCorrect)) {
+                          return Colors.white; // White text on colored backgrounds
+                        }
+                        return Colors.black87; // Dark text on light background for unselected options
                       }
 
                       return GestureDetector(
@@ -394,12 +522,12 @@ class _PracticeDateModeScreenState extends ConsumerState<PracticeDateModeScreen>
                             color: getOptionColor(),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: getOptionColor(),
+                              color: getBorderColor(),
                               width: 2,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: getOptionColor().withOpacity(0.2),
+                                color: getBorderColor().withOpacity(0.2),
                                 blurRadius: 5,
                                 offset: const Offset(0, 2),
                               ),
@@ -409,11 +537,9 @@ class _PracticeDateModeScreenState extends ConsumerState<PracticeDateModeScreen>
                             children: [
                               CircleAvatar(
                                 radius: 15,
-                                backgroundColor: showResult && isCorrect
+                                backgroundColor: showResult && (isCorrect || (isSelected && !isCorrect))
                                     ? Colors.white
-                                    : (showResult && isSelected && !isCorrect)
-                                        ? Colors.white
-                                        : (isSelected ? Colors.white : AppColors.primaryColor),
+                                    : (isSelected ? Colors.white : getBorderColor()),
                                 child: Text(
                                   String.fromCharCode(65 + index), // A, B, C, D
                                   style: TextStyle(
@@ -421,7 +547,9 @@ class _PracticeDateModeScreenState extends ConsumerState<PracticeDateModeScreen>
                                         ? AppColors.successColor
                                         : (showResult && isSelected && !isCorrect)
                                             ? AppColors.errorColor
-                                            : (isSelected ? AppColors.primaryColor : Colors.white),
+                                            : showResult
+                                                ? Colors.grey[600] // Darker grey for unselected after answer
+                                                : (isSelected ? AppColors.primaryColor : Colors.white),
                                     fontWeight: FontWeight.bold,
                                     fontSize: 14,
                                   ),
@@ -432,7 +560,7 @@ class _PracticeDateModeScreenState extends ConsumerState<PracticeDateModeScreen>
                                 child: Text(
                                   currentQuestion.options[index],
                                   style: TextStyle(
-                                    color: showResult ? Colors.white : (isSelected ? Colors.white : Colors.black87),
+                                    color: getTextColor(),
                                     fontSize: 16,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -547,5 +675,38 @@ class _PracticeDateModeScreenState extends ConsumerState<PracticeDateModeScreen>
         ],
       ),
     );
+  }
+
+  void _toggleBookmark(WidgetRef ref, String questionId) async {
+    try {
+      await ref.read(userDataRepositoryProvider).toggleFavorite(questionId);
+
+      // Refresh favorites provider
+      ref.invalidate(favoritesProvider);
+
+      if (mounted) {
+        final isBookmarked =
+            await ref.read(userDataRepositoryProvider).isFavorite(questionId);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isBookmarked ? '즐겨찾기에 추가되었습니다! 📚' : '즐겨찾기에서 제거되었습니다'),
+            backgroundColor:
+                isBookmarked ? AppColors.successColor : AppColors.textSecondary,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error toggling bookmark: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('즐겨찾기 처리 중 오류가 발생했습니다'),
+            backgroundColor: AppColors.errorColor,
+          ),
+        );
+      }
+    }
   }
 }

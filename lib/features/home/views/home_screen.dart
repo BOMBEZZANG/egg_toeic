@@ -58,14 +58,6 @@ class HomeScreen extends ConsumerWidget {
                     ),
                     _buildCuteMenuCard(
                       context,
-                      title: 'Part 2',
-                      subtitle: 'Question & Response',
-                      emoji: '🎧',
-                      color: Colors.purple,
-                      onTap: () => context.push('/part2'),
-                    ),
-                    _buildCuteMenuCard(
-                      context,
                       title: '복습하기',
                       subtitle: 'Review & Practice',
                       emoji: '🔄',
@@ -74,19 +66,11 @@ class HomeScreen extends ConsumerWidget {
                     ),
                     _buildCuteMenuCard(
                       context,
-                      title: 'Achievements',
-                      subtitle: 'Your trophies',
-                      emoji: '🏆',
-                      color: Colors.amber,
-                      onTap: () => context.push('/achievements'),
-                    ),
-                    _buildCuteMenuCard(
-                      context,
-                      title: 'Statistics',
-                      subtitle: 'Learning progress',
+                      title: '통계 & 업적',
+                      subtitle: 'Progress & Achievements',
                       emoji: '📊',
                       color: AppColors.successColor,
-                      onTap: () => context.push('/statistics'),
+                      onTap: () => context.push('/statistics-achievements'),
                     ),
                   ]),
                 ),
@@ -100,91 +84,191 @@ class HomeScreen extends ConsumerWidget {
 
   Widget _buildHeader(BuildContext context, userProgress) {
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(
-        gradient: AppColors.backgroundGradient,
+      padding: const EdgeInsets.fromLTRB(20, 30, 20, 25),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.primaryColor,
+            AppColors.primaryColor.withOpacity(0.9),
+            const Color(0xFFAB47BC),
+            const Color(0xFF3F51B5),
+          ],
+          stops: const [0.0, 0.3, 0.7, 1.0],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryColor.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+            spreadRadius: 2,
+          ),
+        ],
       ),
       child: Row(
         children: [
-          // Character Avatar
+          // Enhanced Character Avatar
           Container(
-            width: 80,
-            height: 80,
+            width: 90,
+            height: 90,
             decoration: BoxDecoration(
-              color: Colors.white,
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white,
+                  Color(0xFFE3F2FD),
+                ],
+              ),
               shape: BoxShape.circle,
               boxShadow: [
+                BoxShadow(
+                  color: Colors.white.withOpacity(0.3),
+                  blurRadius: 15,
+                  offset: const Offset(0, 6),
+                  spreadRadius: 2,
+                ),
                 BoxShadow(
                   color: Colors.black.withOpacity(0.1),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
               ],
+              border: Border.all(
+                color: Colors.white.withOpacity(0.5),
+                width: 3,
+              ),
             ),
             child: Center(
               child: Text(
                 userProgress.characterEmoji,
-                style: const TextStyle(fontSize: 40),
+                style: const TextStyle(fontSize: 45),
               ),
             ),
           ),
           const SizedBox(width: 16),
 
-          // User Info
+          // Enhanced User Info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Level ${userProgress.userLevel}',
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    'Level ${userProgress.userLevel}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black26,
+                          offset: Offset(1, 1),
+                          blurRadius: 2,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
+                const SizedBox(height: 8),
                 Text(
                   userProgress.characterName,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 24,
+                    fontSize: 28,
                     fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black26,
+                        offset: Offset(2, 2),
+                        blurRadius: 4,
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 8),
 
-                // XP Progress Bar
+                // Enhanced XP Progress Bar
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          '${userProgress.experiencePoints} XP',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.amber.withOpacity(0.4),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                '✨',
+                                style: TextStyle(fontSize: 12),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${userProgress.experiencePoints} XP',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         Text(
                           'Next: ${userProgress.xpToNextLevel} XP',
                           style: const TextStyle(
-                            color: Colors.white70,
+                            color: Colors.white,
                             fontSize: 12,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: LinearProgressIndicator(
-                        value: userProgress.currentLevelProgress,
-                        backgroundColor: Colors.white24,
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                          Colors.white,
+                    const SizedBox(height: 8),
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: LinearProgressIndicator(
+                          value: userProgress.currentLevelProgress,
+                          backgroundColor: Colors.white.withOpacity(0.2),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            Color(0xFFFFD54F),
+                          ),
+                          minHeight: 10,
                         ),
-                        minHeight: 8,
                       ),
                     ),
                   ],
@@ -207,12 +291,12 @@ class HomeScreen extends ConsumerWidget {
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
             Colors.white,
-            Colors.blue.shade50,
+            Color(0xFFE3F2FD),
           ],
         ),
         borderRadius: BorderRadius.circular(24),
@@ -257,10 +341,10 @@ class HomeScreen extends ConsumerWidget {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
+                  gradient: const LinearGradient(
                     colors: [
-                      Colors.orange.shade300,
-                      Colors.red.shade400,
+                      Color(0xFFFFB74D),
+                      Color(0xFFEF5350),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(20),
@@ -312,7 +396,9 @@ class HomeScreen extends ConsumerWidget {
                         value: progress.clamp(0.0, 1.0),
                         backgroundColor: Colors.grey[200],
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          isCompleted ? AppColors.successColor : AppColors.primaryColor,
+                          isCompleted
+                              ? AppColors.successColor
+                              : AppColors.primaryColor,
                         ),
                         minHeight: 12,
                       ),
@@ -326,10 +412,10 @@ class HomeScreen extends ConsumerWidget {
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
+                      gradient: const LinearGradient(
                         colors: [
-                          Colors.green.shade300,
-                          Colors.green.shade500,
+                          Color(0xFF81C784),
+                          Color(0xFF4CAF50),
                         ],
                       ),
                       shape: BoxShape.circle,
@@ -519,7 +605,7 @@ class HomeScreen extends ConsumerWidget {
 
             // Main Content
             Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -528,35 +614,40 @@ class HomeScreen extends ConsumerWidget {
                   Text(
                     emoji,
                     style: const TextStyle(
-                      fontSize: 32,
+                      fontSize: 28,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
                   // Title and subtitle section
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: TextStyle(
-                          color: color,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          title,
+                          style: TextStyle(
+                            color: color,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.3,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          color: color.withOpacity(0.7),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            color: color.withOpacity(0.7),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),

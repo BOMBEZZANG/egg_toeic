@@ -13,7 +13,11 @@
       "Read(//mnt/c/Projects/**)",
       "Bash(npm run dev:*)",
       "Bash(flutter analyze:*)",
-      "Bash(dart analyze:*)"
+      "Bash(dart analyze:*)",
+      "Bash(grep:*)",
+      "Bash(/mnt/c/flutter/flutter/bin/dart pub get)",
+      "Bash(/mnt/c/flutter/flutter/bin/flutter analyze)",
+      "Bash(/mnt/c/flutter/flutter/bin/dart analyze lib/features/home/views/home_screen.dart)"
     ],
     "deny": [],
     "ask": []

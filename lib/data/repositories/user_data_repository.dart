@@ -53,89 +53,114 @@ abstract class UserDataRepository extends BaseRepository {
 }
 
 class UserDataRepositoryImpl implements UserDataRepository {
-  // TODO: Re-enable Hive after generating adapters
-  // Box<UserProgress>? _progressBox;
-  // Box<List<WrongAnswer>>? _wrongAnswersBox;
-  // Box<List<LearningSession>>? _sessionsBox;
-  // Box<List<String>>? _favoritesBox;
-  // Box<List<Achievement>>? _achievementsBox;
+  Box<dynamic>? _progressBox;
+  Box<dynamic>? _wrongAnswersBox;
+  Box<dynamic>? _sessionsBox;
+  Box<dynamic>? _favoritesBox;
+  Box<dynamic>? _achievementsBox;
 
   LearningSession? _currentSession;
 
-  // Temporary in-memory storage
+  // Fallback in-memory storage for when Hive fails
   UserProgress _userProgress = UserProgress.initial();
   List<WrongAnswer> _wrongAnswers = [];
   List<LearningSession> _sessions = [];
   List<String> _favorites = [];
   List<Achievement> _achievements = Achievement.getDefaultAchievements();
 
+  bool _hiveInitialized = false;
+
   @override
   Future<void> initialize() async {
-    // TODO: Re-enable Hive initialization after generating adapters
-    /*
-    await Hive.initFlutter();
+    try {
+      await Hive.initFlutter();
 
-    // Register adapters if not already registered
-    if (!Hive.isAdapterRegistered(HiveConstants.userProgressTypeId)) {
-      Hive.registerAdapter(UserProgressAdapter());
-    }
-    if (!Hive.isAdapterRegistered(HiveConstants.wrongAnswerTypeId)) {
-      Hive.registerAdapter(WrongAnswerAdapter());
-    }
-    if (!Hive.isAdapterRegistered(HiveConstants.learningSessionTypeId)) {
-      Hive.registerAdapter(LearningSessionAdapter());
-    }
-    if (!Hive.isAdapterRegistered(HiveConstants.achievementTypeId)) {
-      Hive.registerAdapter(AchievementAdapter());
-    }
-    if (!Hive.isAdapterRegistered(5)) {
-      Hive.registerAdapter(AchievementTypeAdapter());
-    }
+      // Open boxes using JSON serialization for now
+      _progressBox = await Hive.openBox<dynamic>(HiveConstants.userProgressBox);
+      _wrongAnswersBox = await Hive.openBox<dynamic>(HiveConstants.wrongAnswersBox);
+      _sessionsBox = await Hive.openBox<dynamic>(HiveConstants.sessionsBox);
+      _favoritesBox = await Hive.openBox<dynamic>(HiveConstants.favoritesBox);
+      _achievementsBox = await Hive.openBox<dynamic>('achievements_box');
 
-    // Open boxes
-    _progressBox = await Hive.openBox<UserProgress>(
-      HiveConstants.userProgressBox,
-    );
-    _wrongAnswersBox = await Hive.openBox<List<WrongAnswer>>(
-      HiveConstants.wrongAnswersBox,
-    );
-    _sessionsBox = await Hive.openBox<List<LearningSession>>(
-      HiveConstants.sessionsBox,
-    );
-    _favoritesBox = await Hive.openBox<List<String>>(
-      HiveConstants.favoritesBox,
-    );
-    _achievementsBox = await Hive.openBox<List<Achievement>>(
-      'achievements_box',
-    );
+      // Load existing data from Hive or initialize with defaults
+      await _loadFromHive();
 
-    // Initialize with default values if empty
-    if (_progressBox!.isEmpty) {
-      await _progressBox!.put('progress', UserProgress.initial());
+      _hiveInitialized = true;
+      print('✅ Hive storage initialized successfully');
+    } catch (e) {
+      print('❌ Failed to initialize Hive storage: $e');
+      print('📝 Using in-memory storage as fallback');
+      _hiveInitialized = false;
     }
-    if (_wrongAnswersBox!.isEmpty) {
-      await _wrongAnswersBox!.put('wrongAnswers', <WrongAnswer>[]);
+  }
+
+  Future<void> _loadFromHive() async {
+    try {
+      // Load user progress
+      final progressJson = _progressBox?.get('progress');
+      if (progressJson != null) {
+        _userProgress = UserProgress.fromJson(Map<String, dynamic>.from(progressJson));
+      } else {
+        _userProgress = UserProgress.initial();
+        await _saveUserProgressToHive();
+      }
+
+      // Load wrong answers
+      final wrongAnswersJson = _wrongAnswersBox?.get('wrongAnswers');
+      if (wrongAnswersJson != null && wrongAnswersJson is List) {
+        _wrongAnswers = wrongAnswersJson
+            .map((json) => WrongAnswer.fromJson(Map<String, dynamic>.from(json)))
+            .toList();
+      } else {
+        _wrongAnswers = [];
+      }
+
+      // Load favorites
+      final favoritesJson = _favoritesBox?.get('favorites');
+      if (favoritesJson != null && favoritesJson is List) {
+        _favorites = List<String>.from(favoritesJson);
+      } else {
+        _favorites = [];
+      }
+
+      // Load sessions
+      final sessionsJson = _sessionsBox?.get('sessions');
+      if (sessionsJson != null && sessionsJson is List) {
+        _sessions = sessionsJson
+            .map((json) => LearningSession.fromJson(Map<String, dynamic>.from(json)))
+            .toList();
+      } else {
+        _sessions = [];
+      }
+
+      // Load achievements
+      final achievementsJson = _achievementsBox?.get('achievements');
+      if (achievementsJson != null && achievementsJson is List) {
+        _achievements = achievementsJson
+            .map((json) => Achievement.fromJson(Map<String, dynamic>.from(json)))
+            .toList();
+      } else {
+        _achievements = Achievement.getDefaultAchievements();
+        await _saveAchievementsToHive();
+      }
+
+      print('📚 Loaded ${_wrongAnswers.length} wrong answers from Hive storage');
+    } catch (e) {
+      print('❌ Error loading data from Hive: $e');
     }
-    if (_sessionsBox!.isEmpty) {
-      await _sessionsBox!.put('sessions', <LearningSession>[]);
-    }
-    if (_favoritesBox!.isEmpty) {
-      await _favoritesBox!.put('favorites', <String>[]);
-    }
-    if (_achievementsBox!.isEmpty) {
-      await _achievementsBox!.put('achievements', Achievement.getDefaultAchievements());
-    }
-    */
   }
 
   @override
   Future<void> dispose() async {
-    // TODO: Re-enable Hive cleanup
-    // await _progressBox?.close();
-    // await _wrongAnswersBox?.close();
-    // await _sessionsBox?.close();
-    // await _favoritesBox?.close();
-    // await _achievementsBox?.close();
+    try {
+      await _progressBox?.close();
+      await _wrongAnswersBox?.close();
+      await _sessionsBox?.close();
+      await _favoritesBox?.close();
+      await _achievementsBox?.close();
+    } catch (e) {
+      print('❌ Error disposing Hive boxes: $e');
+    }
   }
 
   @override
@@ -146,6 +171,17 @@ class UserDataRepositoryImpl implements UserDataRepository {
   @override
   Future<void> updateUserProgress(UserProgress progress) async {
     _userProgress = progress;
+    await _saveUserProgressToHive();
+  }
+
+  Future<void> _saveUserProgressToHive() async {
+    if (_hiveInitialized && _progressBox != null) {
+      try {
+        await _progressBox!.put('progress', _userProgress.toJson());
+      } catch (e) {
+        print('❌ Error saving user progress to Hive: $e');
+      }
+    }
   }
 
   @override
@@ -230,11 +266,14 @@ class UserDataRepositoryImpl implements UserDataRepository {
   @override
   Future<void> addWrongAnswer(WrongAnswer wrongAnswer) async {
     _wrongAnswers.add(wrongAnswer);
+    await _saveWrongAnswersToHive();
+    print('✅ Saved wrong answer to storage. Total: ${_wrongAnswers.length}');
   }
 
   @override
   Future<void> removeWrongAnswer(String wrongAnswerId) async {
     _wrongAnswers.removeWhere((wa) => wa.id == wrongAnswerId);
+    await _saveWrongAnswersToHive();
   }
 
   @override
@@ -242,6 +281,19 @@ class UserDataRepositoryImpl implements UserDataRepository {
     final index = _wrongAnswers.indexWhere((wa) => wa.id == wrongAnswerId);
     if (index != -1) {
       _wrongAnswers[index] = _wrongAnswers[index].markAsReviewed(resolved: true);
+      await _saveWrongAnswersToHive();
+    }
+  }
+
+  Future<void> _saveWrongAnswersToHive() async {
+    if (_hiveInitialized && _wrongAnswersBox != null) {
+      try {
+        final wrongAnswersJson = _wrongAnswers.map((wa) => wa.toJson()).toList();
+        await _wrongAnswersBox!.put('wrongAnswers', wrongAnswersJson);
+        print('💾 Saved ${wrongAnswersJson.length} wrong answers to Hive');
+      } catch (e) {
+        print('❌ Error saving wrong answers to Hive: $e');
+      }
     }
   }
 
@@ -318,6 +370,28 @@ class UserDataRepositoryImpl implements UserDataRepository {
     } else {
       _favorites.add(questionId);
     }
+    await _saveFavoritesToHive();
+  }
+
+  Future<void> _saveFavoritesToHive() async {
+    if (_hiveInitialized && _favoritesBox != null) {
+      try {
+        await _favoritesBox!.put('favorites', _favorites);
+      } catch (e) {
+        print('❌ Error saving favorites to Hive: $e');
+      }
+    }
+  }
+
+  Future<void> _saveAchievementsToHive() async {
+    if (_hiveInitialized && _achievementsBox != null) {
+      try {
+        final achievementsJson = _achievements.map((a) => a.toJson()).toList();
+        await _achievementsBox!.put('achievements', achievementsJson);
+      } catch (e) {
+        print('❌ Error saving achievements to Hive: $e');
+      }
+    }
   }
 
   @override
@@ -335,6 +409,7 @@ class UserDataRepositoryImpl implements UserDataRepository {
     final index = _achievements.indexWhere((a) => a.id == achievement.id);
     if (index != -1) {
       _achievements[index] = achievement;
+      await _saveAchievementsToHive();
     }
   }
 

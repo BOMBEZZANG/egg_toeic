@@ -35,11 +35,11 @@ class Part5ModeSelectionScreen extends ConsumerWidget {
                   _buildModeCard(
                     context,
                     title: 'Practice Mode',
-                    subtitle: 'Learn at your own pace',
-                    description: 'No time pressure • See explanations • Review mistakes',
-                    emoji: '📚',
+                    subtitle: 'Daily practice calendar',
+                    description: 'Track progress • Build streaks • Visual learning journey',
+                    emoji: '📅',
                     color: AppColors.primaryColor,
-                    onTap: () => context.push('/part5/practice-levels'),
+                    onTap: () => context.push('/part5/practice-calendar'),
                   ),
 
                   const SizedBox(height: 16),

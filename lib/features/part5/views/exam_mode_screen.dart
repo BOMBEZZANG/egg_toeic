@@ -1,6 +1,7 @@
 import 'package:egg_toeic/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:egg_toeic/core/constants/app_colors.dart';
 import 'package:egg_toeic/providers/repository_providers.dart';
 import 'package:egg_toeic/data/models/simple_models.dart';
@@ -22,7 +23,6 @@ class _ExamModeScreenState extends ConsumerState<ExamModeScreen> {
   String? _errorMessage;
   int _currentQuestionIndex = 0;
   List<int> _userAnswers = [];
-  bool _showResults = false;
   DateTime? _examStartTime;
 
   @override
@@ -80,8 +80,14 @@ class _ExamModeScreenState extends ConsumerState<ExamModeScreen> {
 
   void _finishExam() async {
     await _saveWrongAnswers();
-    setState(() {
-      _showResults = true;
+
+    // Navigate to comprehensive result screen
+    context.push('/part5/exam-result', extra: {
+      'examRound': widget.round,
+      'questions': _questions,
+      'userAnswers': _userAnswers,
+      'examStartTime': _examStartTime!,
+      'examEndTime': DateTime.now(),
     });
   }
 
@@ -170,7 +176,7 @@ class _ExamModeScreenState extends ConsumerState<ExamModeScreen> {
         backgroundColor: Colors.orange,
         foregroundColor: Colors.white,
         actions: [
-          if (!_showResults && _questions.isNotEmpty)
+          if (_questions.isNotEmpty)
             Center(
               child: Padding(
                 padding: const EdgeInsets.only(right: 16.0),
@@ -237,9 +243,7 @@ class _ExamModeScreenState extends ConsumerState<ExamModeScreen> {
                         style: TextStyle(fontSize: 16, color: Colors.grey),
                       ),
                     )
-                  : _showResults
-                      ? _buildResultsScreen()
-                      : _buildQuestionScreen(),
+                  : _buildQuestionScreen(),
     );
   }
 
@@ -486,165 +490,4 @@ class _ExamModeScreenState extends ConsumerState<ExamModeScreen> {
     );
   }
 
-  Widget _buildResultsScreen() {
-    final score = _calculateScore();
-    final percentage = (score / _questions.length * 100).round();
-    final duration = _getExamDuration();
-
-    return Padding(
-      padding: const EdgeInsets.all(20.0),
-      child: Column(
-        children: [
-          // Results header
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.orange.withOpacity(0.8), Colors.orange],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              children: [
-                const Icon(
-                  Icons.emoji_events,
-                  size: 64,
-                  color: Colors.white,
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Exam Completed!',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  widget.round.replaceAll('ROUND_', 'Round '),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Score summary
-          Row(
-            children: [
-              Expanded(
-                child: _buildScoreCard(
-                  '점수',
-                  '$score/${_questions.length}',
-                  Icons.quiz_rounded,
-                  AppColors.secondaryColor,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildScoreCard(
-                  '정답률',
-                  '$percentage%',
-                  Icons.percent_rounded,
-                  AppColors.successColor,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          _buildScoreCard(
-            '소요 시간',
-            '${duration.inMinutes}분 ${duration.inSeconds % 60}초',
-            Icons.timer_rounded,
-            AppColors.tertiaryColor,
-          ),
-
-          const SizedBox(height: 24),
-
-          // Action buttons
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      _currentQuestionIndex = 0;
-                      _userAnswers = List.filled(_questions.length, -1);
-                      _showResults = false;
-                      _examStartTime = DateTime.now();
-                    });
-                  },
-                  icon: const Icon(Icons.replay),
-                  label: const Text('Retake Exam'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.home),
-                  label: const Text('Back to Home'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey[300],
-                    foregroundColor: Colors.black87,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildScoreCard(
-      String title, String value, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 32),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: TextStyle(
-              color: color,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

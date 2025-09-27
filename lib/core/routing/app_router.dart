@@ -7,11 +7,13 @@ import 'package:egg_toeic/features/part5/views/practice_level_selection_screen.d
 import 'package:egg_toeic/features/part5/views/exam_level_selection_screen.dart';
 import 'package:egg_toeic/features/part5/views/practice_mode_screen.dart';
 import 'package:egg_toeic/features/part5/views/practice_date_mode_screen.dart';
+import 'package:egg_toeic/features/part5/views/practice_calendar_screen.dart';
+import 'package:egg_toeic/features/part5/views/exam_result_screen.dart';
+import 'package:egg_toeic/features/bookmarks/views/bookmarks_screen.dart';
 import 'package:egg_toeic/features/part5/views/exam_mode_screen.dart';
 import 'package:egg_toeic/features/part5/views/explanation_screen.dart';
 import 'package:egg_toeic/features/part2/views/part2_home_screen.dart';
-import 'package:egg_toeic/features/achievements/views/achievements_screen.dart';
-import 'package:egg_toeic/features/statistics/views/statistics_screen.dart';
+import 'package:egg_toeic/features/statistics/views/statistics_achievements_screen.dart';
 import 'package:egg_toeic/features/review/views/review_select_screen.dart';
 import 'package:egg_toeic/features/wrong_answers/views/wrong_answers_screen.dart';
 import 'package:egg_toeic/features/wrong_answers/views/retake_question_screen.dart';
@@ -36,6 +38,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: 'practice-levels',
             name: 'practice-levels',
             builder: (context, state) => const PracticeLevelSelectionScreen(),
+          ),
+          GoRoute(
+            path: 'practice-calendar',
+            name: 'practice-calendar',
+            builder: (context, state) => const PracticeCalendarScreen(),
           ),
           GoRoute(
             path: 'exam-levels',
@@ -73,6 +80,20 @@ final routerProvider = Provider<GoRouter>((ref) {
             },
           ),
           GoRoute(
+            path: 'exam-result',
+            name: 'exam-result',
+            builder: (context, state) {
+              final extra = state.extra as Map<String, dynamic>;
+              return ExamResultScreen(
+                examRound: extra['examRound'] as String,
+                questions: extra['questions'] as List<SimpleQuestion>,
+                userAnswers: extra['userAnswers'] as List<int>,
+                examStartTime: extra['examStartTime'] as DateTime,
+                examEndTime: extra['examEndTime'] as DateTime,
+              );
+            },
+          ),
+          GoRoute(
             path: 'explanation',
             name: 'explanation',
             builder: (context, state) {
@@ -88,14 +109,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const Part2HomeScreen(),
       ),
       GoRoute(
-        path: '/achievements',
-        name: 'achievements',
-        builder: (context, state) => const AchievementsScreen(),
+        path: '/statistics-achievements',
+        name: 'statistics-achievements',
+        builder: (context, state) => const StatisticsAchievementsScreen(),
       ),
       GoRoute(
-        path: '/statistics',
-        name: 'statistics',
-        builder: (context, state) => const StatisticsScreen(),
+        path: '/bookmarks',
+        name: 'bookmarks',
+        builder: (context, state) => const BookmarksScreen(),
       ),
       GoRoute(
         path: '/review-select',

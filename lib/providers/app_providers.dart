@@ -1,4 +1,5 @@
 import 'package:egg_toeic/data/repositories/user_data_repository.dart';
+import 'package:egg_toeic/data/repositories/question_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:egg_toeic/data/models/user_progress_model.dart';
 import 'package:egg_toeic/data/models/simple_models.dart';
@@ -232,10 +233,43 @@ final favoritesProvider = FutureProvider<List<String>>((ref) async {
   return await repository.getFavoriteQuestions();
 });
 
+// Bookmarked Questions Provider (with cached question data)
+final bookmarkedQuestionsProvider = FutureProvider<List<SimpleQuestion>>((ref) async {
+  print('🔄 bookmarkedQuestionsProvider: Starting to load bookmarked questions...');
+
+  final userDataRepository = ref.read(userDataRepositoryProvider);
+  final questionRepository = ref.read(questionRepositoryProvider);
+
+  print('🔄 bookmarkedQuestionsProvider: Got repository instances');
+
+  final favoriteIds = await userDataRepository.getFavoriteQuestions();
+
+  print('📚 bookmarkedQuestionsProvider: Loaded ${favoriteIds.length} favorite IDs');
+
+  if (favoriteIds.isEmpty) {
+    print('📚 bookmarkedQuestionsProvider: No favorites found, returning empty list');
+    return <SimpleQuestion>[];
+  }
+
+  // Fetch all question data in one batch
+  print('🔄 bookmarkedQuestionsProvider: Fetching question data for ${favoriteIds.length} favorites...');
+  final questions = await questionRepository.getQuestionsByIds(favoriteIds);
+
+  print('📚 bookmarkedQuestionsProvider: Successfully loaded ${questions.length} bookmarked questions');
+  return questions;
+});
+
 final favoritesNotifierProvider =
     StateNotifierProvider<FavoritesNotifier, AsyncValue<List<String>>>((ref) {
   final repository = ref.read(userDataRepositoryProvider);
   return FavoritesNotifier(repository);
+});
+
+final bookmarkedQuestionsNotifierProvider =
+    StateNotifierProvider<BookmarkedQuestionsNotifier, AsyncValue<List<SimpleQuestion>>>((ref) {
+  final userDataRepository = ref.read(userDataRepositoryProvider);
+  final questionRepository = ref.read(questionRepositoryProvider);
+  return BookmarkedQuestionsNotifier(userDataRepository, questionRepository);
 });
 
 class FavoritesNotifier extends StateNotifier<AsyncValue<List<String>>> {
@@ -264,10 +298,52 @@ class FavoritesNotifier extends StateNotifier<AsyncValue<List<String>>> {
   }
 }
 
+class BookmarkedQuestionsNotifier extends StateNotifier<AsyncValue<List<SimpleQuestion>>> {
+  final UserDataRepository _userDataRepository;
+  final QuestionRepository _questionRepository;
+
+  BookmarkedQuestionsNotifier(this._userDataRepository, this._questionRepository)
+      : super(const AsyncValue.loading()) {
+    _loadBookmarkedQuestions();
+  }
+
+  Future<void> _loadBookmarkedQuestions() async {
+    try {
+      final favoriteIds = await _userDataRepository.getFavoriteQuestions();
+
+      if (favoriteIds.isEmpty) {
+        state = const AsyncValue.data([]);
+        return;
+      }
+
+      final questions = await _questionRepository.getQuestionsByIds(favoriteIds);
+      state = AsyncValue.data(questions);
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
+    }
+  }
+
+  Future<void> refresh() async {
+    await _loadBookmarkedQuestions();
+  }
+
+  Future<void> toggleBookmark(String questionId) async {
+    await _userDataRepository.toggleFavorite(questionId);
+    await _loadBookmarkedQuestions();
+  }
+}
+
 // Achievement Providers
 final achievementsProvider = FutureProvider<List<Achievement>>((ref) async {
   final repository = ref.read(userDataRepositoryProvider);
-  return await repository.getAchievements();
+  final achievements = await repository.getAchievements();
+
+  // If no achievements exist, return default achievements
+  if (achievements.isEmpty) {
+    return Achievement.getDefaultAchievements();
+  }
+
+  return achievements;
 });
 
 final achievementsNotifierProvider =

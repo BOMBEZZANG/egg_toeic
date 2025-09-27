@@ -5,25 +5,19 @@ import 'package:egg_toeic/data/repositories/user_data_repository.dart';
 import 'package:egg_toeic/data/repositories/question_repository.dart';
 import 'package:egg_toeic/data/models/simple_models.dart';
 
-// TODO: Switch back to full repositories after fixing adapter issues
-
 final questionRepositoryProvider = Provider<QuestionRepository>((ref) {
   return QuestionRepositoryImpl(); // Switch to Firebase-connected repository
 });
 
-// Use StateProvider to maintain the same instance
+// Use the full UserDataRepositoryImpl with Hive persistence
 final userDataRepositoryProvider = Provider<UserDataRepository>((ref) {
-  print('🔧 Creating TempUserDataRepositoryImpl instance');
-  return _TempRepositorySingleton.instance;
+  return _UserDataRepositorySingleton.instance;
 });
 
 // Singleton to ensure we keep the same repository instance
-class _TempRepositorySingleton {
-  static final TempUserDataRepositoryImpl _instance = TempUserDataRepositoryImpl();
-  static TempUserDataRepositoryImpl get instance {
-    print('🔧 Singleton: Returning instance ${_instance.hashCode}');
-    return _instance;
-  }
+class _UserDataRepositorySingleton {
+  static final UserDataRepositoryImpl _instance = UserDataRepositoryImpl();
+  static UserDataRepositoryImpl get instance => _instance;
 }
 
 // Practice sessions provider - fetches grouped questions by date from Firebase
@@ -31,6 +25,121 @@ final practiceSessionsProvider = FutureProvider<Map<String, List<Question>>>((re
   final questionRepo = ref.read(questionRepositoryProvider);
   return await questionRepo.getPracticeSessionsByDate();
 });
+
+// Metadata-only practice sessions provider - only gets dates and counts (much faster)
+final practiceSessionMetadataProvider = FutureProvider<List<PracticeSessionMetadata>>((ref) async {
+  final questionRepo = ref.read(questionRepositoryProvider);
+
+  print('📋 Loading practice session metadata only (no question data)...');
+
+  try {
+    // Get available dates from metadata (very fast)
+    final availableDates = await questionRepo.getAvailablePracticeDates();
+
+    if (availableDates.isEmpty) {
+      print('⚠️ No available practice dates found');
+      return [];
+    }
+
+    print('📅 Found ${availableDates.length} available practice dates: $availableDates');
+
+    // Create metadata objects without loading questions
+    final metadataList = <PracticeSessionMetadata>[];
+
+    for (int i = 0; i < availableDates.length; i++) {
+      final dateString = availableDates[i];
+      final date = DateTime.parse(dateString);
+      final sessionNumber = availableDates.length - i; // Latest first
+
+      // For now, assume 10 questions per session (could be enhanced to get from metadata)
+      // In a real implementation, you could get this from the daily metadata doc
+      final totalQuestions = 10;
+
+      // Mock completion data (in real app, get from user progress)
+      final isToday = _isToday(date);
+      final daysSinceToday = DateTime.now().difference(date).inDays;
+
+      int completedQuestions;
+      double accuracy;
+
+      if (isToday) {
+        completedQuestions = 3;
+        accuracy = 0.0;
+      } else if (daysSinceToday < 7) {
+        completedQuestions = 10 - daysSinceToday;
+        accuracy = 0.6 + (daysSinceToday * 0.05);
+      } else {
+        completedQuestions = totalQuestions;
+        accuracy = 0.85;
+      }
+
+      metadataList.add(PracticeSessionMetadata(
+        id: 'firebase_${dateString.replaceAll('-', '_')}',
+        date: date,
+        totalQuestions: totalQuestions,
+        completedQuestions: completedQuestions.clamp(0, totalQuestions),
+        accuracy: accuracy,
+        sessionNumber: sessionNumber,
+      ));
+    }
+
+    print('✅ Generated metadata for ${metadataList.length} practice sessions (no questions loaded)');
+    return metadataList;
+
+  } catch (e) {
+    print('❌ Error loading practice session metadata: $e');
+    // Return fallback mock data
+    return _generateFallbackPracticeMetadata();
+  }
+});
+
+bool _isToday(DateTime date) {
+  final now = DateTime.now();
+  return date.year == now.year &&
+      date.month == now.month &&
+      date.day == now.day;
+}
+
+List<PracticeSessionMetadata> _generateFallbackPracticeMetadata() {
+  final now = DateTime.now();
+  final metadata = <PracticeSessionMetadata>[];
+
+  // Generate last 30 days of practice sessions (fallback mock data)
+  for (int i = 0; i < 30; i++) {
+    final date = now.subtract(Duration(days: i));
+    final sessionNumber = 30 - i;
+
+    metadata.add(PracticeSessionMetadata(
+      id: 'practice_$sessionNumber',
+      date: date,
+      totalQuestions: 10,
+      completedQuestions: i == 0 ? 3 : (i < 7 ? (10 - i) : 10),
+      accuracy: i == 0 ? 0.0 : (i < 7 ? 0.6 + (i * 0.05) : 0.85),
+      sessionNumber: sessionNumber,
+    ));
+  }
+
+  return metadata;
+}
+
+// Metadata-only class for practice sessions (no questions, just info)
+class PracticeSessionMetadata {
+  final String id;
+  final DateTime date;
+  final int totalQuestions;
+  final int completedQuestions;
+  final double accuracy;
+  final int sessionNumber;
+
+  PracticeSessionMetadata({
+    required this.id,
+    required this.date,
+    required this.totalQuestions,
+    required this.completedQuestions,
+    required this.accuracy,
+    required this.sessionNumber,
+  });
+}
 
 // Available exam rounds provider
 final availableExamRoundsProvider = FutureProvider<List<String>>((ref) async {

@@ -41,11 +41,11 @@ class PracticeLevelSelectionScreen extends ConsumerWidget {
               Expanded(
                 child: Consumer(
                   builder: (context, ref, child) {
-                    final practiceSessionsAsync = ref.watch(practiceSessionsProvider);
+                    final practiceSessionsAsync = ref.watch(practiceSessionMetadataProvider);
 
                     return practiceSessionsAsync.when(
-                      data: (sessionsByDate) {
-                        final sessions = _buildPracticeSessionsFromFirebaseData(sessionsByDate);
+                      data: (metadataList) {
+                        final sessions = _buildPracticeSessionsFromMetadata(metadataList);
 
                         if (sessions.isEmpty) {
                           return Center(
@@ -408,6 +408,25 @@ class PracticeLevelSelectionScreen extends ConsumerWidget {
       ));
 
       sessionNumber--;
+    }
+
+    return sessions;
+  }
+
+  List<PracticeSession> _buildPracticeSessionsFromMetadata(List<PracticeSessionMetadata> metadataList) {
+    final sessions = <PracticeSession>[];
+
+    for (final metadata in metadataList) {
+      sessions.add(PracticeSession(
+        id: metadata.id,
+        title: 'PRACTICE ${metadata.sessionNumber}',
+        subtitle: _formatDate(metadata.date),
+        date: metadata.date,
+        completedQuestions: metadata.completedQuestions,
+        totalQuestions: metadata.totalQuestions,
+        accuracy: metadata.accuracy,
+        questionIds: [], // We don't load question IDs in metadata mode
+      ));
     }
 
     return sessions;

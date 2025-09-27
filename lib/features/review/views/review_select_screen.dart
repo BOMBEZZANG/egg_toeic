@@ -308,12 +308,6 @@ class ReviewSelectScreen extends ConsumerWidget {
   }
 
   void _navigateToFavorites(BuildContext context) {
-    // TODO: Implement favorites screen navigation
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('즐겨찾기 기능은 곧 추가될 예정입니다!'),
-        backgroundColor: AppColors.infoColor,
-      ),
-    );
+    context.push('/bookmarks');
   }
 }
