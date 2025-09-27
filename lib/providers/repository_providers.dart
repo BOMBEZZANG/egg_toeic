@@ -1,8 +1,11 @@
+import 'package:egg_toeic/data/models/question_analytics_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:egg_toeic/data/repositories/simple_repositories.dart';
 import 'package:egg_toeic/data/repositories/temp_user_data_repository.dart';
 import 'package:egg_toeic/data/repositories/user_data_repository.dart';
 import 'package:egg_toeic/data/repositories/question_repository.dart';
+import 'package:egg_toeic/data/repositories/analytics_repository.dart';
+import 'package:egg_toeic/data/datasources/remote/analytics_service.dart';
 import 'package:egg_toeic/data/models/simple_models.dart';
 
 final questionRepositoryProvider = Provider<QuestionRepository>((ref) {
@@ -21,13 +24,15 @@ class _UserDataRepositorySingleton {
 }
 
 // Practice sessions provider - fetches grouped questions by date from Firebase
-final practiceSessionsProvider = FutureProvider<Map<String, List<Question>>>((ref) async {
+final practiceSessionsProvider =
+    FutureProvider<Map<String, List<Question>>>((ref) async {
   final questionRepo = ref.read(questionRepositoryProvider);
   return await questionRepo.getPracticeSessionsByDate();
 });
 
 // Metadata-only practice sessions provider - only gets dates and counts (much faster)
-final practiceSessionMetadataProvider = FutureProvider<List<PracticeSessionMetadata>>((ref) async {
+final practiceSessionMetadataProvider =
+    FutureProvider<List<PracticeSessionMetadata>>((ref) async {
   final questionRepo = ref.read(questionRepositoryProvider);
 
   print('📋 Loading practice session metadata only (no question data)...');
@@ -41,7 +46,8 @@ final practiceSessionMetadataProvider = FutureProvider<List<PracticeSessionMetad
       return [];
     }
 
-    print('📅 Found ${availableDates.length} available practice dates: $availableDates');
+    print(
+        '📅 Found ${availableDates.length} available practice dates: $availableDates');
 
     // Create metadata objects without loading questions
     final metadataList = <PracticeSessionMetadata>[];
@@ -83,9 +89,9 @@ final practiceSessionMetadataProvider = FutureProvider<List<PracticeSessionMetad
       ));
     }
 
-    print('✅ Generated metadata for ${metadataList.length} practice sessions (no questions loaded)');
+    print(
+        '✅ Generated metadata for ${metadataList.length} practice sessions (no questions loaded)');
     return metadataList;
-
   } catch (e) {
     print('❌ Error loading practice session metadata: $e');
     // Return fallback mock data
@@ -141,6 +147,14 @@ class PracticeSessionMetadata {
   });
 }
 
+// Practice questions by date provider with caching
+final practiceQuestionsByDateProvider =
+    FutureProvider.family<List<Question>, String>((ref, date) async {
+  final questionRepo = ref.read(questionRepositoryProvider);
+  print('🚀 Loading questions for date: $date (with caching)');
+  return await questionRepo.getPracticeQuestionsByDate(date);
+});
+
 // Available exam rounds provider
 final availableExamRoundsProvider = FutureProvider<List<String>>((ref) async {
   final questionRepo = ref.read(questionRepositoryProvider);
@@ -148,9 +162,45 @@ final availableExamRoundsProvider = FutureProvider<List<String>>((ref) async {
 });
 
 // Exam questions for a specific round provider
-final examQuestionsByRoundProvider = FutureProvider.family<List<Question>, String>((ref, round) async {
+final examQuestionsByRoundProvider =
+    FutureProvider.family<List<Question>, String>((ref, round) async {
   final questionRepo = ref.read(questionRepositoryProvider);
   return await questionRepo.getExamQuestionsByRound(round);
+});
+
+// Analytics repository provider
+final analyticsRepositoryProvider = Provider<AnalyticsRepository>((ref) {
+  return AnalyticsRepository(AnalyticsService());
+});
+
+// Question analytics provider - gets analytics for a specific question
+final questionAnalyticsProvider =
+    FutureProvider.family<QuestionAnalytics?, String>((ref, questionId) async {
+  final analyticsRepo = ref.read(analyticsRepositoryProvider);
+
+  // Add timeout to prevent indefinite loading on network issues
+  try {
+    return await analyticsRepo.getQuestionAnalytics(questionId)
+        .timeout(const Duration(seconds: 10));
+  } catch (e) {
+    print('⚠️ Analytics timeout or error for question $questionId: $e');
+    return null; // Return null instead of throwing to show "no data" state
+  }
+});
+
+// Multiple question analytics provider - gets analytics for multiple questions
+final multipleQuestionAnalyticsProvider =
+    FutureProvider.family<List<QuestionAnalytics>, List<String>>(
+        (ref, questionIds) async {
+  final analyticsRepo = ref.read(analyticsRepositoryProvider);
+  return await analyticsRepo.getMultipleQuestionAnalytics(questionIds);
+});
+
+// User performance stats provider
+final userPerformanceStatsProvider =
+    FutureProvider.family<Map<String, dynamic>, String>((ref, userId) async {
+  final analyticsRepo = ref.read(analyticsRepositoryProvider);
+  return await analyticsRepo.getUserPerformanceStats(userId);
 });
 
 // Initialize all repositories

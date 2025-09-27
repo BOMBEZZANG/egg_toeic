@@ -77,7 +77,8 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
 
       // Update category scores
       if (!categoryScores.containsKey(category)) {
-        categoryScores[category] = CategoryScore(category: category, correct: 0, total: 0);
+        categoryScores[category] =
+            CategoryScore(category: category, correct: 0, total: 0);
       }
       categoryScores[category] = categoryScores[category]!.copyWith(
         correct: categoryScores[category]!.correct + (isCorrect ? 1 : 0),
@@ -122,11 +123,11 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
         text.contains('definition') ||
         text.contains('word that best') ||
         grammarPoint.contains('vocabulary')) {
-      return 'Vocabulary';
+      return '어휘';
     }
 
     // Grammar indicators
-    return 'Grammar';
+    return '문법';
   }
 
   List<String> _extractTags(SimpleQuestion question) {
@@ -135,27 +136,41 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
     final tags = <String>[];
 
     // Grammar tags
-    if (text.contains('tense') || grammarPoint.contains('tense')) tags.add('Tenses');
-    if (text.contains('passive') || grammarPoint.contains('passive')) tags.add('Passive Voice');
-    if (text.contains('conditional') || grammarPoint.contains('conditional')) tags.add('Conditionals');
-    if (text.contains('modal') || grammarPoint.contains('modal')) tags.add('Modal Verbs');
-    if (text.contains('preposition') || grammarPoint.contains('preposition')) tags.add('Prepositions');
-    if (text.contains('article') || grammarPoint.contains('article')) tags.add('Articles');
-    if (text.contains('subject') && text.contains('verb')) tags.add('Subject-Verb Agreement');
-    if (text.contains('relative') || grammarPoint.contains('relative')) tags.add('Relative Clauses');
-    if (text.contains('infinitive') || grammarPoint.contains('infinitive')) tags.add('Infinitives');
-    if (text.contains('gerund') || grammarPoint.contains('gerund')) tags.add('Gerunds');
-    if (text.contains('comparative') || grammarPoint.contains('comparative')) tags.add('Comparatives');
+    if (text.contains('tense') || grammarPoint.contains('tense'))
+      tags.add('시제');
+    if (text.contains('passive') || grammarPoint.contains('passive'))
+      tags.add('수동태');
+    if (text.contains('conditional') || grammarPoint.contains('conditional'))
+      tags.add('조건문');
+    if (text.contains('modal') || grammarPoint.contains('modal'))
+      tags.add('조동사');
+    if (text.contains('preposition') || grammarPoint.contains('preposition'))
+      tags.add('전치사');
+    if (text.contains('article') || grammarPoint.contains('article'))
+      tags.add('관사');
+    if (text.contains('subject') && text.contains('verb')) tags.add('주어-동사 일치');
+    if (text.contains('relative') || grammarPoint.contains('relative'))
+      tags.add('관계절');
+    if (text.contains('infinitive') || grammarPoint.contains('infinitive'))
+      tags.add('부정사');
+    if (text.contains('gerund') || grammarPoint.contains('gerund'))
+      tags.add('동명사');
+    if (text.contains('comparative') || grammarPoint.contains('comparative'))
+      tags.add('비교급');
 
     // Vocabulary tags
-    if (text.contains('business') || grammarPoint.contains('business')) tags.add('Business Terms');
-    if (text.contains('formal') || grammarPoint.contains('formal')) tags.add('Formal Language');
-    if (text.contains('phrasal') || grammarPoint.contains('phrasal')) tags.add('Phrasal Verbs');
-    if (text.contains('idiom') || grammarPoint.contains('idiom')) tags.add('Idioms');
+    if (text.contains('business') || grammarPoint.contains('business'))
+      tags.add('비즈니스 용어');
+    if (text.contains('formal') || grammarPoint.contains('formal'))
+      tags.add('격식체');
+    if (text.contains('phrasal') || grammarPoint.contains('phrasal'))
+      tags.add('구동사');
+    if (text.contains('idiom') || grammarPoint.contains('idiom'))
+      tags.add('숙어');
 
     // Default tag if none found
     if (tags.isEmpty) {
-      tags.add('General');
+      tags.add('일반');
     }
 
     return tags;
@@ -168,7 +183,8 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
     final sortedTags = tagAnalysis.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
-    for (final entry in sortedTags.take(5)) { // Top 5 weak areas
+    for (final entry in sortedTags.take(5)) {
+      // Top 5 weak areas
       weakAreas.add(WeakArea(
         topic: entry.key,
         errorCount: entry.value,
@@ -181,24 +197,24 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
 
   String _getRecommendation(String tag) {
     switch (tag) {
-      case 'Tenses':
-        return 'Focus on past, present, and future tense forms. Practice timeline exercises.';
-      case 'Prepositions':
-        return 'Study common preposition combinations. Practice with location and time phrases.';
-      case 'Passive Voice':
-        return 'Review passive voice formation. Practice active to passive transformations.';
-      case 'Modal Verbs':
-        return 'Study modal verb meanings and usage. Practice obligation, possibility, and advice.';
-      case 'Conditionals':
-        return 'Review zero, first, second, and third conditional structures.';
-      case 'Subject-Verb Agreement':
-        return 'Practice with singular/plural subjects. Focus on collective nouns and indefinite pronouns.';
-      case 'Business Terms':
-        return 'Expand business vocabulary. Study workplace communication and formal expressions.';
-      case 'Articles':
-        return 'Review definite/indefinite article rules. Practice with countable/uncountable nouns.';
+      case '시제':
+        return '과거, 현재, 미래 시제 형태에 집중하세요. 시간 순서 연습을 해보세요.';
+      case '전치사':
+        return '일반적인 전치사 조합을 학습하세요. 장소와 시간 표현을 연습하세요.';
+      case '수동태':
+        return '수동태 형성 방법을 복습하세요. 능동태에서 수동태로 변환하는 연습을 하세요.';
+      case '조동사':
+        return '조동사의 의미와 용법을 학습하세요. 의무, 가능성, 조언 표현을 연습하세요.';
+      case '조건문':
+        return '0, 1, 2, 3조건문 구조를 복습하세요.';
+      case '주어-동사 일치':
+        return '단수/복수 주어와 함께 연습하세요. 집합명사와 부정대명사에 집중하세요.';
+      case '비즈니스 용어':
+        return '비즈니스 어휘를 확장하세요. 직장 커뮤니케이션과 격식체 표현을 학습하세요.';
+      case '관사':
+        return '정관사/부정관사 규칙을 복습하세요. 가산/불가산 명사와 함께 연습하세요.';
       default:
-        return 'Continue practicing and reviewing this grammar point regularly.';
+        return '이 문법 포인트를 정기적으로 계속 연습하고 복습하세요.';
     }
   }
 
@@ -207,10 +223,11 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
     final results = _calculateResults();
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: Text('${widget.examRound.replaceAll('ROUND_', 'Round ')} Results'),
-        backgroundColor: AppColors.primaryColor,
+        title: Text('${widget.examRound.replaceAll('ROUND_', '라운드 ')} 결과'),
+        backgroundColor:
+            const Color.fromARGB(255, 19, 215, 137), // Duolingo green
         foregroundColor: Colors.white,
         elevation: 0,
         bottom: TabBar(
@@ -219,21 +236,33 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
           tabs: const [
-            Tab(icon: Icon(Icons.assessment), text: 'Overview'),
-            Tab(icon: Icon(Icons.list_alt), text: 'Questions'),
-            Tab(icon: Icon(Icons.trending_up), text: 'Analysis'),
+            Tab(icon: Icon(Icons.assessment), text: '개요'),
+            Tab(icon: Icon(Icons.list_alt), text: '문제'),
+            Tab(icon: Icon(Icons.trending_up), text: '분석'),
           ],
         ),
       ),
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: TabBarView(
-          controller: _tabController,
-          children: [
-            _buildOverviewTab(results),
-            _buildQuestionsTab(results),
-            _buildAnalysisTab(results),
-          ],
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF58CC02), // Duolingo green
+              Color(0xFF89E219), // Bright green
+            ],
+          ),
+        ),
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildOverviewTab(results),
+              _buildQuestionsTab(results),
+              _buildAnalysisTab(results),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: _buildBottomActions(),
@@ -264,46 +293,81 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.primaryColor,
-            AppColors.primaryColor.withOpacity(0.8),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: AppTheme.cardShadow,
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30), // More rounded like Duolingo
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF58CC02).withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+            spreadRadius: 2,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          Icon(
-            _getScoreIcon(results.percentage),
-            size: 64,
-            color: Colors.white,
+          // Emoji icon in colored circle (Duolingo style)
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: const Color(0xFF58CC02),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF58CC02).withOpacity(0.3),
+                  blurRadius: 15,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Icon(
+                _getScoreIcon(results.percentage),
+                size: 40,
+                color: Colors.white,
+              ),
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Text(
             '${results.correctAnswers}/${results.totalQuestions}',
             style: const TextStyle(
-              color: Colors.white,
+              color: Color(0xFF58CC02),
               fontSize: 36,
               fontWeight: FontWeight.bold,
             ),
           ),
           Text(
-            '${results.percentage}% Correct',
-            style: const TextStyle(
-              color: Colors.white,
+            '${results.percentage}% 정답',
+            style: TextStyle(
+              color: Colors.grey[600],
               fontSize: 18,
+              fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            _getPerformanceLabel(results.percentage),
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF58CC02).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: const Color(0xFF58CC02).withOpacity(0.2),
+              ),
+            ),
+            child: Text(
+              _getPerformanceLabel(results.percentage),
+              style: TextStyle(
+                color: const Color(0xFF58CC02).withOpacity(0.8),
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -312,20 +376,35 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
   }
 
   Widget _buildCategoryBreakdown(ExamResults results) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30), // More rounded like Duolingo
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1CB0F6).withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+            spreadRadius: 2,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.category, color: AppColors.primaryColor),
+                Icon(Icons.category, color: const Color(0xFF1CB0F6)),
                 const SizedBox(width: 8),
                 const Text(
-                  'Category Breakdown',
+                  '카테고리별 분석',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -335,9 +414,9 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
             ),
             const SizedBox(height: 16),
             ...results.categoryScores.map((category) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _buildCategoryItem(category),
-            )),
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildCategoryItem(category),
+                )),
           ],
         ),
       ),
@@ -346,8 +425,11 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
 
   Widget _buildCategoryItem(CategoryScore category) {
     final percentage = (category.correct / category.total * 100).round();
-    final color = percentage >= 70 ? AppColors.successColor :
-                  percentage >= 50 ? Colors.orange : AppColors.errorColor;
+    final color = percentage >= 70
+        ? AppColors.successColor
+        : percentage >= 50
+            ? Colors.orange
+            : AppColors.errorColor;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -385,22 +467,38 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
   Widget _buildTimeStats(ExamResults results) {
     final minutes = results.duration.inMinutes;
     final seconds = results.duration.inSeconds % 60;
-    final avgTimePerQuestion = results.duration.inSeconds / results.totalQuestions;
+    final avgTimePerQuestion =
+        results.duration.inSeconds / results.totalQuestions;
 
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30), // More rounded like Duolingo
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFF9600).withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+            spreadRadius: 2,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.timer, color: AppColors.primaryColor),
+                Icon(Icons.timer, color: const Color(0xFFFF9600)),
                 const SizedBox(width: 8),
                 const Text(
-                  'Time Statistics',
+                  '시간 통계',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -413,15 +511,15 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
               children: [
                 Expanded(
                   child: _buildStatItem(
-                    'Total Time',
-                    '${minutes}m ${seconds}s',
+                    '총 시간',
+                    '${minutes}분 ${seconds}초',
                     Icons.access_time,
                   ),
                 ),
                 Expanded(
                   child: _buildStatItem(
-                    'Avg per Question',
-                    '${avgTimePerQuestion.round()}s',
+                    '문제당 평균',
+                    '${avgTimePerQuestion.round()}초',
                     Icons.speed,
                   ),
                 ),
@@ -436,14 +534,14 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
   Widget _buildStatItem(String label, String value, IconData icon) {
     return Column(
       children: [
-        Icon(icon, color: AppColors.primaryColor, size: 32),
+        Icon(icon, color: const Color(0xFFFF9600), size: 32),
         const SizedBox(height: 8),
         Text(
           value,
           style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: AppColors.primaryColor,
+            color: Color(0xFFFF9600),
           ),
         ),
         Text(
@@ -470,8 +568,11 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
 
   Widget _buildQuestionResultCard(QuestionResult result) {
     final isCorrect = result.isCorrect;
-    final borderColor = isCorrect ? AppColors.successColor : AppColors.errorColor;
-    final bgColor = isCorrect ? AppColors.successColor.withOpacity(0.1) : AppColors.errorColor.withOpacity(0.1);
+    final borderColor =
+        isCorrect ? AppColors.successColor : AppColors.errorColor;
+    final bgColor = isCorrect
+        ? AppColors.successColor.withOpacity(0.1)
+        : AppColors.errorColor.withOpacity(0.1);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -493,7 +594,8 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: borderColor,
                     borderRadius: BorderRadius.circular(12),
@@ -543,7 +645,7 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
               Row(
                 children: [
                   Text(
-                    'Your answer: ',
+                    '당신의 답: ',
                     style: TextStyle(color: Colors.grey[600], fontSize: 12),
                   ),
                   Text(
@@ -560,7 +662,7 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
               ),
             ] else ...[
               Text(
-                'No answer selected',
+                '답을 선택하지 않음',
                 style: TextStyle(
                   color: AppColors.errorColor,
                   fontSize: 12,
@@ -574,7 +676,7 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
               Row(
                 children: [
                   Text(
-                    'Correct answer: ',
+                    '정답: ',
                     style: TextStyle(color: Colors.grey[600], fontSize: 12),
                   ),
                   Text(
@@ -596,17 +698,20 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
               const SizedBox(height: 8),
               Wrap(
                 spacing: 4,
-                children: result.tags.map((tag) => Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    tag,
-                    style: const TextStyle(fontSize: 10),
-                  ),
-                )).toList(),
+                children: result.tags
+                    .map((tag) => Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            tag,
+                            style: const TextStyle(fontSize: 10),
+                          ),
+                        ))
+                    .toList(),
               ),
             ],
           ],
@@ -649,7 +754,7 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
                 Icon(Icons.analytics, color: AppColors.primaryColor),
                 const SizedBox(width: 8),
                 const Text(
-                  'Performance Analysis',
+                  '성과 분석',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -683,14 +788,14 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
               Icon(Icons.emoji_events, color: AppColors.successColor, size: 48),
               const SizedBox(height: 16),
               const Text(
-                'Excellent Work!',
+                '훌륭한 성과! 🎉',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const Text(
-                'No specific weak areas identified. Keep up the great work!',
+                '특별히 약한 영역이 없습니다. 계속 잘하고 있어요!',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.grey),
               ),
@@ -713,7 +818,7 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
                 Icon(Icons.trending_down, color: AppColors.errorColor),
                 const SizedBox(width: 8),
                 const Text(
-                  'Areas for Improvement',
+                  '개선이 필요한 영역',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -723,9 +828,9 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
             ),
             const SizedBox(height: 16),
             ...results.weakAreas.map((area) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _buildWeakAreaItem(area),
-            )),
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildWeakAreaItem(area),
+                )),
           ],
         ),
       ),
@@ -760,7 +865,7 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '${area.errorCount} errors',
+                  '${area.errorCount}개 오답',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 12,
@@ -798,7 +903,7 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
                 Icon(Icons.school, color: AppColors.primaryColor),
                 const SizedBox(width: 8),
                 const Text(
-                  'Study Plan',
+                  '학습 계획',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -807,30 +912,31 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
               ],
             ),
             const SizedBox(height: 16),
-            ..._getStudyRecommendations(results).map((recommendation) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(top: 6),
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryColor,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      recommendation,
-                      style: const TextStyle(fontSize: 14, height: 1.4),
-                    ),
-                  ),
-                ],
-              ),
-            )),
+            ..._getStudyRecommendations(results)
+                .map((recommendation) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            margin: const EdgeInsets.only(top: 6),
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryColor,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              recommendation,
+                              style: const TextStyle(fontSize: 14, height: 1.4),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )),
           ],
         ),
       ),
@@ -856,11 +962,13 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
             child: OutlinedButton.icon(
               onPressed: () => context.pop(),
               icon: const Icon(Icons.home),
-              label: const Text('Back to Home'),
+              label: const Text('홈으로'),
               style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF1CB0F6), // Duolingo blue
+                side: const BorderSide(color: Color(0xFF1CB0F6)),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(20), // More rounded
                 ),
               ),
             ),
@@ -874,13 +982,13 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
                 context.push('/wrong-answers');
               },
               icon: const Icon(Icons.quiz),
-              label: const Text('Review Mistakes'),
+              label: const Text('오답 복습'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryColor,
+                backgroundColor: const Color(0xFF58CC02), // Duolingo green
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(20), // More rounded
                 ),
               ),
             ),
@@ -890,13 +998,13 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
             child: OutlinedButton.icon(
               onPressed: () => context.push('/bookmarks'),
               icon: const Icon(Icons.bookmark),
-              label: const Text('Bookmarks'),
+              label: const Text('북마크'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.primaryColor,
-                side: BorderSide(color: AppColors.primaryColor),
+                foregroundColor: const Color(0xFFFF9600), // Duolingo orange
+                side: const BorderSide(color: Color(0xFFFF9600)),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(20), // More rounded
                 ),
               ),
             ),
@@ -915,11 +1023,11 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
   }
 
   String _getPerformanceLabel(int percentage) {
-    if (percentage >= 90) return 'Excellent Performance!';
-    if (percentage >= 80) return 'Great Job!';
-    if (percentage >= 70) return 'Good Work!';
-    if (percentage >= 60) return 'Room for Improvement';
-    return 'Keep Practicing!';
+    if (percentage >= 90) return '훌륭한 성과! 🎉';
+    if (percentage >= 80) return '잘했어요! 👍';
+    if (percentage >= 70) return '좋아요! 😊';
+    if (percentage >= 60) return '개선의 여지가 있어요 📈';
+    return '계속 연습하세요! 💪';
   }
 
   String _getDetailedAnalysis(ExamResults results) {
@@ -937,13 +1045,17 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
     String analysis = '';
 
     if (percentage >= 80) {
-      analysis += 'Excellent performance! You demonstrate strong understanding of TOEIC Part 5 concepts. ';
+      analysis +=
+          'Excellent performance! You demonstrate strong understanding of TOEIC Part 5 concepts. ';
     } else if (percentage >= 70) {
-      analysis += 'Good performance overall. With focused practice, you can achieve even better results. ';
+      analysis +=
+          'Good performance overall. With focused practice, you can achieve even better results. ';
     } else if (percentage >= 60) {
-      analysis += 'You\'re on the right track, but there\'s room for improvement. Focus on fundamental concepts. ';
+      analysis +=
+          'You\'re on the right track, but there\'s room for improvement. Focus on fundamental concepts. ';
     } else {
-      analysis += 'Consider reviewing basic grammar and vocabulary concepts before attempting more practice tests. ';
+      analysis +=
+          'Consider reviewing basic grammar and vocabulary concepts before attempting more practice tests. ';
     }
 
     if (strongCategories.isNotEmpty) {
@@ -962,24 +1074,33 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
     final percentage = results.percentage;
 
     if (percentage < 60) {
-      recommendations.add('Review basic grammar fundamentals daily for 30 minutes');
-      recommendations.add('Start with easier practice questions before attempting full exams');
-      recommendations.add('Focus on understanding question patterns and common mistake types');
+      recommendations
+          .add('Review basic grammar fundamentals daily for 30 minutes');
+      recommendations.add(
+          'Start with easier practice questions before attempting full exams');
+      recommendations.add(
+          'Focus on understanding question patterns and common mistake types');
     } else if (percentage < 80) {
-      recommendations.add('Practice specific weak areas identified in the analysis');
-      recommendations.add('Review explanations for incorrect answers carefully');
+      recommendations
+          .add('Practice specific weak areas identified in the analysis');
+      recommendations
+          .add('Review explanations for incorrect answers carefully');
       recommendations.add('Take regular practice tests to build confidence');
     } else {
-      recommendations.add('Continue regular practice to maintain your high performance');
+      recommendations
+          .add('Continue regular practice to maintain your high performance');
       recommendations.add('Focus on time management during practice sessions');
-      recommendations.add('Challenge yourself with more difficult question sets');
+      recommendations
+          .add('Challenge yourself with more difficult question sets');
     }
 
     if (results.weakAreas.isNotEmpty) {
-      recommendations.add('Dedicate extra study time to: ${results.weakAreas.take(2).map((e) => e.topic).join(', ')}');
+      recommendations.add(
+          'Dedicate extra study time to: ${results.weakAreas.take(2).map((e) => e.topic).join(', ')}');
     }
 
-    recommendations.add('Review your mistakes regularly using the Wrong Answers section');
+    recommendations
+        .add('Review your mistakes regularly using the Wrong Answers section');
 
     return recommendations;
   }

@@ -1,6 +1,6 @@
 class AppStrings {
   // App Info
-  static const String appName = 'Egg TOEIC';
+  static const String appName = 'Egg_Toeic';
   static const String appTitle = 'TOEIC Part 5 Master';
 
   // Navigation

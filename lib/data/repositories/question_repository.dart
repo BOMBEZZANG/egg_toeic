@@ -149,17 +149,16 @@ class QuestionRepositoryImpl implements QuestionRepository {
   Future<List<Question>> getQuestionsByIds(List<String> questionIds, {String mode = 'practice'}) async {
     if (questionIds.isEmpty) return [];
 
-    print('🔍 Fetching ${questionIds.length} questions by IDs: $questionIds');
-    final questions = <Question>[];
+    print('🚀 Fetching ${questionIds.length} questions by IDs in parallel: $questionIds');
 
-    for (final id in questionIds) {
-      final question = await getQuestionById(id, mode: mode);
-      if (question != null) {
-        questions.add(question);
-      }
-    }
+    // Use Future.wait to fetch all questions in parallel (MUCH faster!)
+    final futures = questionIds.map((id) => getQuestionById(id, mode: mode));
+    final results = await Future.wait(futures);
 
-    print('✅ Successfully fetched ${questions.length}/${questionIds.length} questions');
+    // Filter out null results
+    final questions = results.where((q) => q != null).cast<Question>().toList();
+
+    print('✅ Successfully fetched ${questions.length}/${questionIds.length} questions in parallel');
     return questions;
   }
 

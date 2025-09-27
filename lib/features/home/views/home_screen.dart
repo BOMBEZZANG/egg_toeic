@@ -5,6 +5,7 @@ import 'package:egg_toeic/core/theme/app_theme.dart';
 import 'package:egg_toeic/core/constants/app_colors.dart';
 import 'package:egg_toeic/core/constants/app_strings.dart';
 import 'package:egg_toeic/providers/app_providers.dart';
+import 'package:egg_toeic/providers/repository_providers.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -29,7 +30,7 @@ class HomeScreen extends ConsumerWidget {
 
               // Daily Progress Card
               SliverToBoxAdapter(
-                child: _buildDailyProgress(context, userProgress),
+                child: _buildDailyProgress(context, ref, userProgress),
               ),
 
               // Quick Stats
@@ -37,14 +38,14 @@ class HomeScreen extends ConsumerWidget {
                 child: _buildQuickStats(context, userProgress),
               ),
 
-              // Main Menu Cards
+              // Main Menu Cards (Duolingo bubble style)
               SliverPadding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 sliver: SliverGrid(
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 20,
+                    crossAxisSpacing: 20,
                     childAspectRatio: 1.0,
                   ),
                   delegate: SliverChildListDelegate([
@@ -53,7 +54,7 @@ class HomeScreen extends ConsumerWidget {
                       title: 'Part 5',
                       subtitle: 'Grammar & Vocabulary',
                       emoji: '📝',
-                      color: AppColors.primaryColor,
+                      color: const Color(0xFF1CB0F6), // Duolingo blue
                       onTap: () => context.push('/part5'),
                     ),
                     _buildCuteMenuCard(
@@ -61,7 +62,7 @@ class HomeScreen extends ConsumerWidget {
                       title: '복습하기',
                       subtitle: 'Review & Practice',
                       emoji: '🔄',
-                      color: AppColors.tertiaryColor,
+                      color: const Color(0xFFFF9600), // Duolingo orange
                       onTap: () => context.push('/review-select'),
                     ),
                     _buildCuteMenuCard(
@@ -69,7 +70,7 @@ class HomeScreen extends ConsumerWidget {
                       title: '통계 & 업적',
                       subtitle: 'Progress & Achievements',
                       emoji: '📊',
-                      color: AppColors.successColor,
+                      color: const Color(0xFFCE82FF), // Duolingo purple
                       onTap: () => context.push('/statistics-achievements'),
                     ),
                   ]),
@@ -84,291 +85,87 @@ class HomeScreen extends ConsumerWidget {
 
   Widget _buildHeader(BuildContext context, userProgress) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 30, 20, 25),
-      decoration: BoxDecoration(
+      padding: const EdgeInsets.fromLTRB(20, 40, 20, 30),
+      decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.primaryColor,
-            AppColors.primaryColor.withOpacity(0.9),
-            const Color(0xFFAB47BC),
-            const Color(0xFF3F51B5),
-          ],
-          stops: const [0.0, 0.3, 0.7, 1.0],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primaryColor.withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Enhanced Character Avatar
-          Container(
-            width: 90,
-            height: 90,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.white,
-                  Color(0xFFE3F2FD),
-                ],
-              ),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.white.withOpacity(0.3),
-                  blurRadius: 15,
-                  offset: const Offset(0, 6),
-                  spreadRadius: 2,
-                ),
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-              border: Border.all(
-                color: Colors.white.withOpacity(0.5),
-                width: 3,
-              ),
-            ),
-            child: Center(
-              child: Text(
-                userProgress.characterEmoji,
-                style: const TextStyle(fontSize: 45),
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-
-          // Enhanced User Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.3),
-                      width: 1,
-                    ),
-                  ),
-                  child: Text(
-                    'Level ${userProgress.userLevel}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black26,
-                          offset: Offset(1, 1),
-                          blurRadius: 2,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  userProgress.characterName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black26,
-                        offset: Offset(2, 2),
-                        blurRadius: 4,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // Enhanced XP Progress Bar
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.amber.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.amber.withOpacity(0.4),
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Text(
-                                '✨',
-                                style: TextStyle(fontSize: 12),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${userProgress.experiencePoints} XP',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Text(
-                          'Next: ${userProgress.xpToNextLevel} XP',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: LinearProgressIndicator(
-                          value: userProgress.currentLevelProgress,
-                          backgroundColor: Colors.white.withOpacity(0.2),
-                          valueColor: const AlwaysStoppedAnimation<Color>(
-                            Color(0xFFFFD54F),
-                          ),
-                          minHeight: 10,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDailyProgress(BuildContext context, userProgress) {
-    final questionsToday = userProgress.questionsToday ?? 0;
-    final dailyGoal = 10; // Default daily goal
-    final progress = questionsToday / dailyGoal;
-    final isCompleted = questionsToday >= dailyGoal;
-
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.white,
-            Color(0xFFE3F2FD),
+            Color(0xFF58CC02), // Duolingo green
+            Color(0xFF89E219), // Bright green
           ],
         ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: AppColors.primaryColor.withOpacity(0.2),
-          width: 2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primaryColor.withOpacity(0.1),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-            spreadRadius: 2,
-          ),
-        ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Top row with streak and level
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  const Text(
-                    '🎯',
-                    style: TextStyle(fontSize: 24),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Daily Goal',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryColor,
-                        ),
-                  ),
-                ],
-              ),
+              // Streak counter (Duolingo style)
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [
-                      Color(0xFFFFB74D),
-                      Color(0xFFEF5350),
-                    ],
-                  ),
+                  color: const Color(0xFFFF9600), // Orange like Duolingo
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.orange.withOpacity(0.3),
+                      color: const Color(0xFFFF9600).withOpacity(0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),
                   ],
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     const Text(
                       '🔥',
+                      style: TextStyle(fontSize: 18),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${userProgress.currentStreak}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Level badge (Duolingo style)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1CB0F6), // Blue like Duolingo
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF1CB0F6).withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      '👑',
                       style: TextStyle(fontSize: 16),
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      '${userProgress.currentStreak} days',
+                      'Level ${userProgress.userLevel}',
                       style: const TextStyle(
                         color: Colors.white,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -376,65 +173,301 @@ class HomeScreen extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
 
-          // Goal Progress
+          const SizedBox(height: 24),
+
+          // Character and main info
           Row(
             children: [
+              // Duolingo-style character bubble
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                      spreadRadius: 4,
+                    ),
+                  ],
+                  border: Border.all(
+                    color: Colors.white,
+                    width: 4,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    userProgress.characterEmoji,
+                    style: const TextStyle(fontSize: 50),
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 20),
+
+              // Name and XP info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '$questionsToday/$dailyGoal questions',
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      userProgress.characterName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black26,
+                            offset: Offset(2, 2),
+                            blurRadius: 4,
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: LinearProgressIndicator(
-                        value: progress.clamp(0.0, 1.0),
-                        backgroundColor: Colors.grey[200],
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          isCompleted
-                              ? AppColors.successColor
-                              : AppColors.primaryColor,
+
+                    const SizedBox(height: 12),
+
+                    // XP Display (Duolingo style)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFD900), // Gold color
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFFFD900).withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            '💎',
+                            style: TextStyle(fontSize: 16),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${userProgress.experiencePoints} XP',
+                            style: const TextStyle(
+                              color: Colors.black87,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Progress bar (Duolingo style)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Progress to Level ${userProgress.userLevel + 1}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                        minHeight: 12,
+                        const SizedBox(height: 6),
+                        Container(
+                          height: 12,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(6),
+                            color: Colors.white.withOpacity(0.3),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: LinearProgressIndicator(
+                              value: userProgress.currentLevelProgress,
+                              backgroundColor: Colors.transparent,
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                Color(0xFFFFD900),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDailyProgress(
+      BuildContext context, WidgetRef ref, userProgress) {
+    // Get real daily questions count from the repository
+    final userDataRepo = ref.read(userDataRepositoryProvider);
+    final questionsToday = userDataRepo.getTodaysQuestionCount();
+    final dailyGoal = 10; // Default daily goal
+    final progress = questionsToday / dailyGoal;
+    final isCompleted = questionsToday >= dailyGoal;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isCompleted
+              ? [
+                  const Color(0xFF58CC02),
+                  const Color(0xFF89E219)
+                ] // Green when completed
+              : [
+                  const Color(0xFF1CB0F6),
+                  const Color(0xFF42A5F5)
+                ], // Blue when in progress
+        ),
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [
+          BoxShadow(
+            color: (isCompleted
+                    ? const Color(0xFF58CC02)
+                    : const Color(0xFF1CB0F6))
+                .withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Header with motivational message
+          Row(
+            children: [
+              Text(
+                isCompleted ? '🎉' : '💪',
+                style: const TextStyle(fontSize: 28),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isCompleted ? '오늘의 목표 달성!' : '오늘의 목표!',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      isCompleted ? '역시 너무 멋져! 🌟' : '화이팅 힘내자!⭐',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
                 ),
               ),
-              if (isCompleted)
-                Padding(
-                  padding: const EdgeInsets.only(left: 16),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [
-                          Color(0xFF81C784),
-                          Color(0xFF4CAF50),
-                        ],
-                      ),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.green.withOpacity(0.4),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Text(
-                      '🎉',
-                      style: TextStyle(fontSize: 20),
-                    ),
-                  ),
-                ),
             ],
           ),
+
+          const SizedBox(height: 20),
+
+          // Progress Circle (Duolingo style)
+          Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: CircularProgressIndicator(
+                    value: progress.clamp(0.0, 1.0),
+                    strokeWidth: 8,
+                    backgroundColor: Colors.white.withOpacity(0.3),
+                    valueColor:
+                        const AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                ),
+                Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '$questionsToday',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        '/ $dailyGoal',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.8),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Motivational text
+          Text(
+            isCompleted
+                ? 'You\'ve completed your daily goal!'
+                : '${dailyGoal - questionsToday} 문제만 더 풀어보자!',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.9),
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+
+          if (isCompleted) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Text(
+                '⭐ +10 XP earned!',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -442,36 +475,36 @@ class HomeScreen extends ConsumerWidget {
 
   Widget _buildQuickStats(BuildContext context, userProgress) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
           Expanded(
             child: _buildCuteStatCard(
               context,
-              title: 'Questions',
+              title: '총 학습한 문제',
               value: userProgress.totalQuestionsAnswered.toString(),
               emoji: '📚',
-              color: AppColors.primaryColor,
+              color: const Color(0xFF1CB0F6), // Duolingo blue
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
           Expanded(
             child: _buildCuteStatCard(
               context,
-              title: 'Accuracy',
+              title: '정답률',
               value: '${userProgress.accuracyPercentage.toInt()}%',
               emoji: '🎯',
-              color: AppColors.successColor,
+              color: const Color(0xFF58CC02), // Duolingo green
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
           Expanded(
             child: _buildCuteStatCard(
               context,
-              title: 'Streak',
+              title: '연속 공부일',
               value: '${userProgress.currentStreak}',
               emoji: '🔥',
-              color: Colors.orange,
+              color: const Color(0xFFFF9600), // Duolingo orange
             ),
           ),
         ],
@@ -487,17 +520,10 @@ class HomeScreen extends ConsumerWidget {
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.white,
-            color.withOpacity(0.05),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(25),
         border: Border.all(
           color: color.withOpacity(0.2),
           width: 2,
@@ -505,36 +531,57 @@ class HomeScreen extends ConsumerWidget {
         boxShadow: [
           BoxShadow(
             color: color.withOpacity(0.1),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-            spreadRadius: 1,
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+            spreadRadius: 2,
           ),
         ],
       ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            emoji,
-            style: const TextStyle(fontSize: 24),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: color,
+          // Emoji in colored circle
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                emoji,
+                style: const TextStyle(fontSize: 16),
+              ),
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 11,
-              color: color.withOpacity(0.7),
-              fontWeight: FontWeight.w600,
+          const SizedBox(height: 6),
+          // Value
+          Flexible(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
             ),
-            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 2),
+          // Title
+          Flexible(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: 10,
+                color: color.withOpacity(0.8),
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),
@@ -552,121 +599,88 @@ class HomeScreen extends ConsumerWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
+        height: 140,
+        width: 140,
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              color.withOpacity(0.1),
-              color.withOpacity(0.2),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: color.withOpacity(0.3),
-            width: 2,
-          ),
+          color: color,
+          borderRadius: BorderRadius.circular(30),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.2),
-              blurRadius: 15,
-              offset: const Offset(0, 8),
+              color: color.withOpacity(0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
               spreadRadius: 2,
+            ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
             ),
           ],
         ),
-        child: Stack(
-          children: [
-            // Cute floating decorations
-            Positioned(
-              right: 10,
-              top: 10,
-              child: Container(
-                width: 20,
-                height: 20,
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-            Positioned(
-              left: 20,
-              bottom: 15,
-              child: Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-
-            // Main Content
-            Padding(
-              padding: const EdgeInsets.all(10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Big cute emoji
-                  Text(
-                    emoji,
-                    style: const TextStyle(
-                      fontSize: 28,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(30),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Large emoji in white circle (Duolingo style)
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      emoji,
+                      style: const TextStyle(fontSize: 30),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  // Title and subtitle section
-                  Flexible(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          title,
-                          style: TextStyle(
-                            color: color,
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.3,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          subtitle,
-                          style: TextStyle(
-                            color: color.withOpacity(0.7),
-                            fontSize: 10,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Cute shine effect
-            Positioned(
-              right: 15,
-              bottom: 15,
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.8),
-                  shape: BoxShape.circle,
                 ),
-              ),
+
+                const SizedBox(height: 12),
+
+                // Title
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+
+                const SizedBox(height: 4),
+
+                // Subtitle
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.9),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

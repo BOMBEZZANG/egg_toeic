@@ -10,10 +10,12 @@ class PracticeCalendarScreen extends ConsumerStatefulWidget {
   const PracticeCalendarScreen({super.key});
 
   @override
-  ConsumerState<PracticeCalendarScreen> createState() => _PracticeCalendarScreenState();
+  ConsumerState<PracticeCalendarScreen> createState() =>
+      _PracticeCalendarScreenState();
 }
 
-class _PracticeCalendarScreenState extends ConsumerState<PracticeCalendarScreen> {
+class _PracticeCalendarScreenState
+    extends ConsumerState<PracticeCalendarScreen> {
   DateTime _selectedDate = DateTime.now();
   DateTime _focusedDate = DateTime.now();
   DateTime _today = DateTime.now();
@@ -145,21 +147,21 @@ class _PracticeCalendarScreenState extends ConsumerState<PracticeCalendarScreen>
           _buildStatItem(
             icon: Icons.local_fire_department,
             value: currentStreak.toString(),
-            label: 'Current Streak',
+            label: '연속 공부',
             color: Colors.white,
           ),
           const SizedBox(width: 20),
           _buildStatItem(
             icon: Icons.emoji_events,
             value: longestStreak.toString(),
-            label: 'Longest Streak',
+            label: '최고 기록',
             color: Colors.white,
           ),
           const SizedBox(width: 20),
           _buildStatItem(
             icon: Icons.menu_book,
             value: totalStudyDays.toString(),
-            label: 'Study Days',
+            label: '공부 기간',
             color: Colors.white,
           ),
         ],
@@ -275,7 +277,8 @@ class _PracticeCalendarScreenState extends ConsumerState<PracticeCalendarScreen>
 
   Widget _buildCalendarDays() {
     final firstDayOfMonth = DateTime(_focusedDate.year, _focusedDate.month, 1);
-    final lastDayOfMonth = DateTime(_focusedDate.year, _focusedDate.month + 1, 0);
+    final lastDayOfMonth =
+        DateTime(_focusedDate.year, _focusedDate.month + 1, 0);
     final firstWeekday = firstDayOfMonth.weekday % 7;
     final daysInMonth = lastDayOfMonth.day;
 
@@ -292,14 +295,16 @@ class _PracticeCalendarScreenState extends ConsumerState<PracticeCalendarScreen>
           return const SizedBox.shrink(); // Empty cell
         }
 
-        final date = DateTime(_focusedDate.year, _focusedDate.month, dayIndex + 1);
+        final date =
+            DateTime(_focusedDate.year, _focusedDate.month, dayIndex + 1);
         return _buildCalendarDay(date);
       },
     );
   }
 
   Widget _buildCalendarDay(DateTime date) {
-    final practiceData = _practiceData[DateTime(date.year, date.month, date.day)];
+    final practiceData =
+        _practiceData[DateTime(date.year, date.month, date.day)];
     final isToday = _isSameDay(date, _today);
     final isSelected = _isSameDay(date, _selectedDate);
     final isFuture = date.isAfter(_today);
@@ -359,7 +364,9 @@ class _PracticeCalendarScreenState extends ConsumerState<PracticeCalendarScreen>
                 date.day.toString(),
                 style: TextStyle(
                   color: textColor,
-                  fontWeight: isToday || isSelected ? FontWeight.bold : FontWeight.normal,
+                  fontWeight: isToday || isSelected
+                      ? FontWeight.bold
+                      : FontWeight.normal,
                 ),
               ),
             ),
@@ -381,7 +388,8 @@ class _PracticeCalendarScreenState extends ConsumerState<PracticeCalendarScreen>
                     borderRadius: BorderRadius.circular(1.5),
                   ),
                   child: FractionallySizedBox(
-                    widthFactor: practiceData.completedQuestions / practiceData.totalQuestions,
+                    widthFactor: practiceData.completedQuestions /
+                        practiceData.totalQuestions,
                     child: Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -398,7 +406,8 @@ class _PracticeCalendarScreenState extends ConsumerState<PracticeCalendarScreen>
   }
 
   Widget _buildBottomActionButton() {
-    final todayData = _practiceData[DateTime(_today.year, _today.month, _today.day)];
+    final todayData =
+        _practiceData[DateTime(_today.year, _today.month, _today.day)];
 
     String buttonText;
     VoidCallback? onPressed;
@@ -408,7 +417,8 @@ class _PracticeCalendarScreenState extends ConsumerState<PracticeCalendarScreen>
       buttonText = "Start Today's Practice";
       onPressed = _startTodaysPractice;
     } else if (!todayData.isCompleted) {
-      buttonText = "Continue Practice (${todayData.completedQuestions}/${todayData.totalQuestions})";
+      buttonText =
+          "Continue Practice (${todayData.completedQuestions}/${todayData.totalQuestions})";
       onPressed = _continueTodaysPractice;
       buttonColor = const Color(0xFFFF9800);
     } else {
@@ -453,7 +463,8 @@ class _PracticeCalendarScreenState extends ConsumerState<PracticeCalendarScreen>
   }
 
   void _showDateDetailsModal(DateTime date) {
-    final practiceData = _practiceData[DateTime(date.year, date.month, date.day)];
+    final practiceData =
+        _practiceData[DateTime(date.year, date.month, date.day)];
 
     showModalBottomSheet(
       context: context,
@@ -477,9 +488,9 @@ class _PracticeCalendarScreenState extends ConsumerState<PracticeCalendarScreen>
               ),
             ),
             const SizedBox(height: 16),
-
             if (practiceData == null) ...[
-              const Icon(Icons.assignment_outlined, size: 48, color: Colors.grey),
+              const Icon(Icons.assignment_outlined,
+                  size: 48, color: Colors.grey),
               const SizedBox(height: 16),
               const Text('No practice session yet'),
               const SizedBox(height: 20),
@@ -507,7 +518,6 @@ class _PracticeCalendarScreenState extends ConsumerState<PracticeCalendarScreen>
                 ],
               ),
               const SizedBox(height: 20),
-
               if (practiceData.isCompleted) ...[
                 ElevatedButton(
                   onPressed: () {
@@ -583,27 +593,32 @@ class _PracticeCalendarScreenState extends ConsumerState<PracticeCalendarScreen>
 
   void _startTodaysPractice() {
     final dateString = _formatDateForApi(_today);
-    context.push('/part5/practice/session/firebase_${dateString.replaceAll('-', '_')}');
+    context.push(
+        '/part5/practice/session/firebase_${dateString.replaceAll('-', '_')}');
   }
 
   void _continueTodaysPractice() {
     final dateString = _formatDateForApi(_today);
-    context.push('/part5/practice/session/firebase_${dateString.replaceAll('-', '_')}');
+    context.push(
+        '/part5/practice/session/firebase_${dateString.replaceAll('-', '_')}');
   }
 
   void _startPracticeForDate(DateTime date) {
     final dateString = _formatDateForApi(date);
-    context.push('/part5/practice/session/firebase_${dateString.replaceAll('-', '_')}');
+    context.push(
+        '/part5/practice/session/firebase_${dateString.replaceAll('-', '_')}');
   }
 
   void _continuePracticeForDate(DateTime date) {
     final dateString = _formatDateForApi(date);
-    context.push('/part5/practice/session/firebase_${dateString.replaceAll('-', '_')}');
+    context.push(
+        '/part5/practice/session/firebase_${dateString.replaceAll('-', '_')}');
   }
 
   void _retryPracticeForDate(DateTime date) {
     final dateString = _formatDateForApi(date);
-    context.push('/part5/practice/session/firebase_${dateString.replaceAll('-', '_')}');
+    context.push(
+        '/part5/practice/session/firebase_${dateString.replaceAll('-', '_')}');
   }
 
   int _calculateCurrentStreak() {
@@ -635,7 +650,8 @@ class _PracticeCalendarScreenState extends ConsumerState<PracticeCalendarScreen>
 
       if (data != null && data.isCompleted) {
         currentStreak++;
-        longestStreak = currentStreak > longestStreak ? currentStreak : longestStreak;
+        longestStreak =
+            currentStreak > longestStreak ? currentStreak : longestStreak;
       } else {
         currentStreak = 0;
       }
@@ -650,16 +666,36 @@ class _PracticeCalendarScreenState extends ConsumerState<PracticeCalendarScreen>
 
   String _getMonthYearText(DateTime date) {
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
     ];
     return '${months[date.month - 1]} ${date.year}';
   }
 
   String _formatDate(DateTime date) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
     ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
@@ -684,5 +720,6 @@ class PracticeSessionData {
 
   bool get isCompleted => completedQuestions >= totalQuestions;
   bool get isPerfectScore => isCompleted && correctAnswers == totalQuestions;
-  double get accuracy => completedQuestions > 0 ? correctAnswers / completedQuestions : 0.0;
+  double get accuracy =>
+      completedQuestions > 0 ? correctAnswers / completedQuestions : 0.0;
 }

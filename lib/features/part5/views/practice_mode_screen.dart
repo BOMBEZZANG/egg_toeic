@@ -7,6 +7,9 @@ import 'package:egg_toeic/data/models/simple_models.dart';
 import 'package:egg_toeic/data/models/wrong_answer_model.dart';
 import 'package:egg_toeic/providers/app_providers.dart';
 import 'package:egg_toeic/providers/repository_providers.dart';
+import 'package:egg_toeic/core/widgets/question_analytics_widget.dart';
+import 'package:egg_toeic/data/models/question_model.dart' as question_model;
+import 'package:egg_toeic/core/services/anonymous_user_service.dart';
 
 class PracticeModeScreen extends ConsumerStatefulWidget {
   final int difficultyLevel;
@@ -385,22 +388,83 @@ class _PracticeModeScreenState extends ConsumerState<PracticeModeScreen>
             const SizedBox(height: 24),
 
             // Answer Options
-            ...List.generate(
-              question.options.length,
-              (index) => _buildOptionButton(
-                context,
-                option: question.options[index],
-                index: index,
-                isSelected: _selectedAnswer == index,
-                isCorrect: index == question.correctAnswerIndex,
-                isAnswered: _isAnswered,
-                onTap: !_isAnswered ? () => _selectAnswer(index) : null,
-              ),
+            Consumer(
+              builder: (context, ref, child) {
+                final analyticsAsync = ref.watch(questionAnalyticsProvider(question.id));
+
+                return Column(
+                  children: List.generate(
+                    question.options.length,
+                    (index) {
+                      // Get percentage for this option from analytics
+                      double? optionPercentage;
+                      if (_isAnswered && analyticsAsync.hasValue && analyticsAsync.value != null) {
+                        optionPercentage = analyticsAsync.value!.answerPercentages[index.toString()];
+                      }
+
+                      return _buildOptionButton(
+                        context,
+                        option: question.options[index],
+                        index: index,
+                        isSelected: _selectedAnswer == index,
+                        isCorrect: index == question.correctAnswerIndex,
+                        isAnswered: _isAnswered,
+                        optionPercentage: optionPercentage,
+                        onTap: !_isAnswered ? () => _selectAnswer(index) : null,
+                      );
+                    },
+                  ),
+                );
+              },
             ),
 
             // Explanation Section
             if (_isAnswered && _showExplanation) ...[
               const SizedBox(height: 24),
+
+              // Analytics Section
+              Consumer(
+                builder: (context, ref, child) {
+                  final analyticsAsync = ref.watch(questionAnalyticsProvider(question.id));
+
+                  return analyticsAsync.when(
+                    loading: () => Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.blue.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          const SizedBox(width: 12),
+                          Text('Loading analytics...'),
+                        ],
+                      ),
+                    ),
+                    error: (error, stack) => const SizedBox.shrink(),
+                    data: (analytics) => analytics != null
+                        ? Column(
+                            children: [
+                              QuestionAnalyticsWidget(
+                                analytics: analytics,
+                                isCompact: false,
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                          )
+                        : const SizedBox.shrink(),
+                  );
+                },
+              ),
+
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -460,6 +524,7 @@ class _PracticeModeScreenState extends ConsumerState<PracticeModeScreen>
     required bool isSelected,
     required bool isCorrect,
     required bool isAnswered,
+    double? optionPercentage,
     VoidCallback? onTap,
   }) {
     Color backgroundColor = Colors.white;
@@ -544,6 +609,28 @@ class _PracticeModeScreenState extends ConsumerState<PracticeModeScreen>
                       isCorrect ? AppColors.successColor : AppColors.errorColor,
                   size: 24,
                 ),
+              // Show percentage when answered and analytics available
+              if (isAnswered && optionPercentage != null) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Text(
+                    '${optionPercentage.toStringAsFixed(0)}%',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: isCorrect
+                        ? AppColors.successColor
+                        : AppColors.primaryColor,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -645,6 +732,46 @@ class _PracticeModeScreenState extends ConsumerState<PracticeModeScreen>
     setState(() {
       _isAnswered = true;
     });
+
+    // Submit analytics data
+    try {
+      // Get anonymous user ID
+      final anonymousUserId = AnonymousUserService.getAnonymousUserId();
+
+      // Check if this is the first attempt for this question
+      final isFirstAttempt = !AnonymousUserService.hasAnsweredBefore(currentQuestion.id);
+
+      final analyticsRepo = ref.read(analyticsRepositoryProvider);
+      await analyticsRepo.submitAnswer(
+        userId: anonymousUserId,
+        question: question_model.Question(
+          id: currentQuestion.id,
+          questionText: currentQuestion.questionText,
+          options: currentQuestion.options,
+          correctAnswerIndex: currentQuestion.correctAnswerIndex,
+          explanation: currentQuestion.explanation,
+          grammarPoint: currentQuestion.grammarPoint,
+          difficultyLevel: widget.difficultyLevel,
+        ),
+        selectedAnswerIndex: _selectedAnswer!,
+        sessionId: 'practice_session_${DateTime.now().millisecondsSinceEpoch}',
+        timeSpentSeconds: null, // You can track time if needed
+        isFirstAttempt: isFirstAttempt,
+      );
+
+      // Mark as answered if this was the first attempt
+      if (isFirstAttempt) {
+        await AnonymousUserService.markAsAnswered(currentQuestion.id);
+        print('📝 Marked question ${currentQuestion.id} as answered (first attempt)');
+
+        // Invalidate the user progress provider to update home screen immediately
+        ref.invalidate(userProgressProvider);
+      }
+
+      print('✅ Analytics data submitted for question ${currentQuestion.id} (isFirstAttempt: $isFirstAttempt)');
+    } catch (e) {
+      print('❌ Error submitting analytics: $e');
+    }
 
     // Show feedback haptic
     if (isCorrect) {

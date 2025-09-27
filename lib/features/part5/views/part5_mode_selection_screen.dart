@@ -11,46 +11,51 @@ class Part5ModeSelectionScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Part 5: Choose Mode'),
-        backgroundColor: AppColors.primaryColor,
+        title: const Text('파트 5: 모드 선택'),
+        backgroundColor: const Color(0xFF58CC02), // Duolingo green
         foregroundColor: Colors.white,
         elevation: 0,
       ),
       body: Container(
         decoration: const BoxDecoration(
-          gradient: AppTheme.backgroundGradient,
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF58CC02), // Duolingo green
+              Color(0xFF89E219), // Bright green
+            ],
+          ),
         ),
         child: SafeArea(
           child: SingleChildScrollView(
             child: Padding(
               padding: const EdgeInsets.all(20.0),
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Header section
-                  _buildHeader(context),
-
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 60),
 
                   // Mode selection cards
                   _buildModeCard(
                     context,
-                    title: 'Practice Mode',
-                    subtitle: 'Daily practice calendar',
-                    description: 'Track progress • Build streaks • Visual learning journey',
+                    title: '연습 모드',
+                    subtitle: '일일 연습 캘린더',
+                    description: '매일 연습문제 10개 풀기!',
                     emoji: '📅',
-                    color: AppColors.primaryColor,
+                    color: const Color(0xFF1CB0F6), // Duolingo blue
                     onTap: () => context.push('/part5/practice-calendar'),
                   ),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 40),
 
                   _buildModeCard(
                     context,
-                    title: 'Exam Mode',
-                    subtitle: 'Test your skills',
-                    description: 'Timed questions • Real exam experience • Final score',
+                    title: '시험 모드',
+                    subtitle: '실력 테스트',
+                    description: '실제 시험 처럼 풀어보기!',
                     emoji: '⏰',
-                    color: Colors.orange,
+                    color: const Color(0xFFFF9600), // Duolingo orange
                     onTap: () => context.push('/part5/exam-levels'),
                   ),
 
@@ -60,60 +65,6 @@ class Part5ModeSelectionScreen extends ConsumerWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.white,
-            AppColors.primaryColor.withOpacity(0.05),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: AppColors.primaryColor.withOpacity(0.2),
-          width: 2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primaryColor.withOpacity(0.1),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          const Text(
-            '📝',
-            style: TextStyle(fontSize: 48),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Part 5: Incomplete Sentences',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primaryColor,
-                ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Choose the best word or phrase to complete each sentence',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.primaryColor.withOpacity(0.7),
-                ),
-            textAlign: TextAlign.center,
-          ),
-        ],
       ),
     );
   }
@@ -131,145 +82,102 @@ class Part5ModeSelectionScreen extends ConsumerWidget {
       onTap: onTap,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              color.withOpacity(0.1),
-              color.withOpacity(0.2),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: color.withOpacity(0.3),
-            width: 2,
-          ),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(30), // More rounded like Duolingo
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.2),
-              blurRadius: 15,
-              offset: const Offset(0, 8),
+              color: color.withOpacity(0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
               spreadRadius: 2,
+            ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
             ),
           ],
         ),
-        child: Stack(
-          children: [
-            // Cute floating decorations
-            Positioned(
-              right: 10,
-              top: 10,
-              child: Container(
-                width: 20,
-                height: 20,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              // Emoji in colored circle (Duolingo style)
+              Container(
+                width: 70,
+                height: 70,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.2),
+                  color: color,
                   shape: BoxShape.circle,
-                ),
-              ),
-            ),
-            Positioned(
-              left: 20,
-              bottom: 10,
-              child: Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-
-            // Main content
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      emoji,
-                      style: const TextStyle(fontSize: 40),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: color,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            subtitle,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: color.withOpacity(0.8),
-                            ),
-                          ),
-                        ],
-                      ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withOpacity(0.3),
+                      blurRadius: 15,
+                      offset: const Offset(0, 8),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: color.withOpacity(0.2),
-                    ),
+                child: Center(
+                  child: Text(
+                    emoji,
+                    style: const TextStyle(fontSize: 35),
                   ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: color.withOpacity(0.8),
-                        size: 20,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          description,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: color.withOpacity(0.9),
-                            fontWeight: FontWeight.w500,
-                            height: 1.3,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-
-            // Cute shine effect
-            Positioned(
-              right: 15,
-              bottom: 15,
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.8),
-                  shape: BoxShape.circle,
                 ),
               ),
-            ),
-          ],
+
+              const SizedBox(height: 20),
+
+              // Title
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+                textAlign: TextAlign.center,
+              ),
+
+              const SizedBox(height: 8),
+
+              // Subtitle
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[600],
+                ),
+                textAlign: TextAlign.center,
+              ),
+
+              const SizedBox(height: 16),
+
+              // Description in a bubble
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: color.withOpacity(0.2),
+                  ),
+                ),
+                child: Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: color.withOpacity(0.8),
+                    fontWeight: FontWeight.w500,
+                    height: 1.3,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

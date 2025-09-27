@@ -5,17 +5,24 @@ import 'package:egg_toeic/core/constants/app_strings.dart';
 import 'package:egg_toeic/core/routing/app_router.dart';
 import 'package:egg_toeic/providers/repository_providers.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:egg_toeic/core/services/anonymous_user_service.dart';
 import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // TODO: Re-enable Firebase/Hive services after fixing adapter issues
-  // await FirebaseService().initialize();
-  // await HiveService().initialize();
+  // Initialize Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Initialize Hive
+  await Hive.initFlutter();
+
+  // Initialize Anonymous User Service
+  await AnonymousUserService.initialize();
+
   runApp(
     const ProviderScope(
       child: EggToeicApp(),
