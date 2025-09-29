@@ -20,48 +20,57 @@ class _PracticeCalendarScreenState
   DateTime _focusedDate = DateTime.now();
   DateTime _today = DateTime.now();
 
-  // Mock data for practice sessions - in real app this would come from providers
-  final Map<DateTime, PracticeSessionData> _practiceData = {};
+  // Practice session data from Firebase
+  Map<DateTime, PracticeSessionData> _practiceData = {};
 
   @override
   void initState() {
     super.initState();
-    _generateMockData();
+    // Data will be loaded from Firebase via provider
   }
 
-  void _generateMockData() {
-    final now = DateTime.now();
+  void _loadPracticeDataFromProvider() async {
+    try {
+      final practiceMetadata = await ref.read(practiceSessionMetadataProvider.future);
+      final Map<DateTime, PracticeSessionData> newData = {};
 
-    // Generate data for last 30 days
-    for (int i = 0; i < 30; i++) {
-      final date = DateTime(now.year, now.month, now.day - i);
-
-      if (i == 0) {
-        // Today - in progress
-        _practiceData[date] = PracticeSessionData(
-          completedQuestions: 6,
-          totalQuestions: 10,
-          correctAnswers: 5,
-          lastActivity: date,
-        );
-      } else if (i < 5) {
-        // Recent days - completed
-        _practiceData[date] = PracticeSessionData(
-          completedQuestions: 10,
-          totalQuestions: 10,
-          correctAnswers: 8 + (i % 3),
-          lastActivity: date,
-        );
-      } else if (i < 10 && i % 2 == 0) {
-        // Some older days - completed
-        _practiceData[date] = PracticeSessionData(
-          completedQuestions: 10,
-          totalQuestions: 10,
-          correctAnswers: 7 + (i % 4),
-          lastActivity: date,
+      for (final metadata in practiceMetadata) {
+        final dateKey = DateTime(metadata.date.year, metadata.date.month, metadata.date.day);
+        newData[dateKey] = PracticeSessionData(
+          completedQuestions: metadata.completedQuestions,
+          totalQuestions: metadata.totalQuestions,
+          correctAnswers: (metadata.completedQuestions * metadata.accuracy).round(),
+          lastActivity: metadata.date,
         );
       }
+
+      if (mounted) {
+        setState(() {
+          _practiceData = newData;
+        });
+      }
+    } catch (e) {
+      print('❌ Error loading practice data: $e');
+      // Keep empty data map to show "해당 날짜는 휴무!" for all dates
+      if (mounted) {
+        setState(() {
+          _practiceData = {};
+        });
+      }
     }
+  }
+
+  void _refreshData() {
+    // Invalidate the provider to force fresh data from Firebase
+    ref.invalidate(practiceSessionMetadataProvider);
+    // Reload data
+    _loadPracticeDataFromProvider();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadPracticeDataFromProvider();
   }
 
   @override
@@ -74,6 +83,11 @@ class _PracticeCalendarScreenState
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
+          IconButton(
+            onPressed: _refreshData,
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh Data',
+          ),
           IconButton(
             onPressed: _goToToday,
             icon: const Icon(Icons.today),
@@ -489,17 +503,33 @@ class _PracticeCalendarScreenState
             ),
             const SizedBox(height: 16),
             if (practiceData == null) ...[
-              const Icon(Icons.assignment_outlined,
+              const Icon(Icons.free_breakfast,
                   size: 48, color: Colors.grey),
               const SizedBox(height: 16),
-              const Text('No practice session yet'),
+              const Text(
+                '오늘은 휴식일!',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primaryColor,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '이 날짜에는 연습 문제가 없습니다.',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 14,
+                ),
+              ),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _startPracticeForDate(date);
-                },
-                child: const Text('Start Practice'),
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey[400],
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('확인'),
               ),
             ] else ...[
               Row(

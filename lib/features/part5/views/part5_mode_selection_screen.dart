@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:egg_toeic/core/constants/app_colors.dart';
 import 'package:egg_toeic/core/theme/app_theme.dart';
+import 'package:egg_toeic/core/widgets/custom_app_bar.dart';
 
 class Part5ModeSelectionScreen extends ConsumerWidget {
   const Part5ModeSelectionScreen({super.key});
@@ -10,8 +11,8 @@ class Part5ModeSelectionScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('파트 5: 모드 선택'),
+      appBar: CustomAppBar(
+        title: '파트 5: 모드 선택',
         backgroundColor: const Color(0xFF58CC02), // Duolingo green
         foregroundColor: Colors.white,
         elevation: 0,

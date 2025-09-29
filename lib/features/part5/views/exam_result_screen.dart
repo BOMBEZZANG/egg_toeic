@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:egg_toeic/core/constants/app_colors.dart';
 import 'package:egg_toeic/core/theme/app_theme.dart';
 import 'package:egg_toeic/data/models/simple_models.dart';
+import 'package:egg_toeic/providers/repository_providers.dart';
+import 'package:egg_toeic/core/widgets/custom_app_bar.dart';
 
 class ExamResultScreen extends ConsumerStatefulWidget {
   final String examRound;
@@ -64,6 +66,12 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
     Map<String, CategoryScore> categoryScores = {};
     Map<String, int> tagAnalysis = {};
 
+    // Hierarchical category tracking
+    Map<String, Map<int, CategoryScore>> hierarchicalCategories = {
+      '문법': {},
+      '어휘': {},
+    };
+
     for (int i = 0; i < totalQuestions; i++) {
       final question = widget.questions[i];
       final userAnswer = widget.userAnswers[i];
@@ -71,11 +79,13 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
 
       if (isCorrect) correctAnswers++;
 
-      // Determine category and tags
+      // Determine categories and tags
       final category = _determineCategory(question);
+      final mainCategory = _determineMainCategory(question);
+      final difficultyLevel = question.difficultyLevel;
       final tags = _extractTags(question);
 
-      // Update category scores
+      // Update traditional category scores (for compatibility)
       if (!categoryScores.containsKey(category)) {
         categoryScores[category] =
             CategoryScore(category: category, correct: 0, total: 0);
@@ -84,6 +94,17 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
         correct: categoryScores[category]!.correct + (isCorrect ? 1 : 0),
         total: categoryScores[category]!.total + 1,
       );
+
+      // Update hierarchical categories
+      if (!hierarchicalCategories[mainCategory]!.containsKey(difficultyLevel)) {
+        hierarchicalCategories[mainCategory]![difficultyLevel] =
+            CategoryScore(category: 'Level $difficultyLevel', correct: 0, total: 0);
+      }
+      hierarchicalCategories[mainCategory]![difficultyLevel] =
+          hierarchicalCategories[mainCategory]![difficultyLevel]!.copyWith(
+            correct: hierarchicalCategories[mainCategory]![difficultyLevel]!.correct + (isCorrect ? 1 : 0),
+            total: hierarchicalCategories[mainCategory]![difficultyLevel]!.total + 1,
+          );
 
       // Update tag analysis
       for (final tag in tags) {
@@ -102,6 +123,23 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
       ));
     }
 
+    // Create hierarchical categories with totals
+    final hierarchicalCategoryMap = <String, HierarchicalCategory>{};
+    for (final mainCategory in hierarchicalCategories.keys) {
+      final levels = hierarchicalCategories[mainCategory]!;
+      final totalCorrect = levels.values.fold(0, (sum, category) => sum + category.correct);
+      final totalQuestions = levels.values.fold(0, (sum, category) => sum + category.total);
+
+      if (totalQuestions > 0) {
+        hierarchicalCategoryMap[mainCategory] = HierarchicalCategory(
+          name: mainCategory,
+          totalCorrect: totalCorrect,
+          totalQuestions: totalQuestions,
+          levels: levels,
+        );
+      }
+    }
+
     return ExamResults(
       totalQuestions: totalQuestions,
       correctAnswers: correctAnswers,
@@ -110,14 +148,24 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
       questionResults: questionResults,
       categoryScores: categoryScores.values.toList(),
       weakAreas: _identifyWeakAreas(tagAnalysis),
+      hierarchicalCategories: hierarchicalCategoryMap,
     );
   }
 
-  String _determineCategory(SimpleQuestion question) {
-    final text = question.questionText.toLowerCase();
-    final grammarPoint = question.grammarPoint?.toLowerCase() ?? '';
+  // Determine the main category (grammar or vocabulary)
+  String _determineMainCategory(SimpleQuestion question) {
+    final questionType = question.questionType.toLowerCase();
 
-    // Vocabulary indicators
+    if (questionType.contains('vocabulary')) {
+      return '어휘';
+    } else if (questionType.contains('grammar')) {
+      return '문법';
+    }
+
+    // Fallback logic
+    final text = question.questionText.toLowerCase();
+    final grammarPoint = question.grammarPoint.toLowerCase();
+
     if (text.contains('meaning') ||
         text.contains('synonym') ||
         text.contains('definition') ||
@@ -126,8 +174,14 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
       return '어휘';
     }
 
-    // Grammar indicators
     return '문법';
+  }
+
+  // Keep the old method for compatibility but update it to use main category + level
+  String _determineCategory(SimpleQuestion question) {
+    final mainCategory = _determineMainCategory(question);
+    final difficultyLevel = question.difficultyLevel;
+    return 'Level $difficultyLevel $mainCategory';
   }
 
   List<String> _extractTags(SimpleQuestion question) {
@@ -224,8 +278,8 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        title: Text('${widget.examRound.replaceAll('ROUND_', '라운드 ')} 결과'),
+      appBar: CustomAppBar(
+        title: '${widget.examRound.replaceAll('ROUND_', '라운드 ')} 결과',
         backgroundColor:
             const Color.fromARGB(255, 19, 215, 137), // Duolingo green
         foregroundColor: Colors.white,
@@ -413,10 +467,165 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
               ],
             ),
             const SizedBox(height: 16),
-            ...results.categoryScores.map((category) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _buildCategoryItem(category),
-                )),
+            ...results.hierarchicalCategories.entries.map((entry) =>
+                _buildHierarchicalCategoryItem(entry.key, entry.value)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHierarchicalCategoryItem(String categoryName, HierarchicalCategory category) {
+    final percentage = category.percentage.round();
+    final color = percentage >= 70
+        ? AppColors.successColor
+        : percentage >= 50
+            ? Colors.orange
+            : AppColors.errorColor;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: AppTheme.subtleShadow,
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: true,
+          tilePadding: const EdgeInsets.all(16),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          title: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  categoryName == '문법' ? Icons.menu_book : Icons.translate,
+                  color: color,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      categoryName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${category.totalCorrect}/${category.totalQuestions} 정답 (${percentage}%)',
+                      style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          children: [
+            const SizedBox(height: 8),
+            // Overall progress bar
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(
+                value: category.totalCorrect / category.totalQuestions,
+                backgroundColor: Colors.grey[200],
+                valueColor: AlwaysStoppedAnimation<Color>(color),
+                minHeight: 8,
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Level breakdown
+            ...category.levels.entries.map((levelEntry) {
+              final level = levelEntry.key;
+              final levelCategory = levelEntry.value;
+              final levelPercentage = (levelCategory.correct / levelCategory.total * 100).round();
+              final levelColor = levelPercentage >= 70
+                  ? AppColors.successColor
+                  : levelPercentage >= 50
+                      ? Colors.orange
+                      : AppColors.errorColor;
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: levelColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: levelColor.withOpacity(0.3)),
+                      ),
+                      child: Center(
+                        child: Text(
+                          level.toString(),
+                          style: TextStyle(
+                            color: levelColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Level $level',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              Text(
+                                '${levelCategory.correct}/${levelCategory.total} (${levelPercentage}%)',
+                                style: TextStyle(
+                                  color: levelColor,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: levelCategory.correct / levelCategory.total,
+                              backgroundColor: Colors.grey[200],
+                              valueColor: AlwaysStoppedAnimation<Color>(levelColor),
+                              minHeight: 6,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
           ],
         ),
       ),
@@ -692,6 +901,224 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
                 ],
               ),
             ],
+
+            const SizedBox(height: 12),
+
+            // Answer Analytics Section
+            Consumer(
+              builder: (context, ref, child) {
+                final analyticsAsync = ref.watch(questionAnalyticsProvider(result.question.id));
+
+                return analyticsAsync.when(
+                  loading: () => Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        SizedBox(width: 8),
+                        Text('답변 통계 로딩 중...', style: TextStyle(fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                  error: (error, stack) => Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      '답변 통계를 불러올 수 없습니다',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ),
+                  data: (analytics) {
+                    if (analytics == null || analytics.answerPercentages.isEmpty) {
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          '아직 답변 통계가 없습니다',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      );
+                    }
+
+                    return Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey[200]!),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '다른 사용자들의 선택',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: analytics.correctPercentage >= 70
+                                      ? AppColors.successColor.withOpacity(0.1)
+                                      : analytics.correctPercentage >= 50
+                                          ? Colors.orange.withOpacity(0.1)
+                                          : AppColors.errorColor.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '정답률 ${analytics.correctPercentage.toStringAsFixed(0)}%',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: analytics.correctPercentage >= 70
+                                        ? AppColors.successColor
+                                        : analytics.correctPercentage >= 50
+                                            ? Colors.orange
+                                            : AppColors.errorColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          ...List.generate(result.question.options.length, (optionIndex) {
+                            final percentage = analytics.answerPercentages[optionIndex] ?? 0.0;
+                            final isUserSelected = result.userAnswerIndex == optionIndex;
+                            final isCorrectOption = optionIndex == result.question.correctAnswerIndex;
+
+                            Color barColor = Colors.grey[400]!;
+                            if (isCorrectOption) {
+                              barColor = AppColors.successColor;
+                            } else if (isUserSelected && !isCorrectOption) {
+                              barColor = AppColors.errorColor;
+                            }
+
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 20,
+                                        height: 20,
+                                        decoration: BoxDecoration(
+                                          color: isUserSelected ? barColor : Colors.transparent,
+                                          border: Border.all(color: barColor),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            String.fromCharCode(65 + optionIndex),
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: isUserSelected ? Colors.white : barColor,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          result.question.options[optionIndex],
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: isCorrectOption ? FontWeight.bold : FontWeight.normal,
+                                            color: isCorrectOption
+                                                ? AppColors.successColor
+                                                : Colors.grey[700],
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      if (isUserSelected) ...[
+                                        const SizedBox(width: 4),
+                                        Icon(
+                                          Icons.person,
+                                          size: 12,
+                                          color: barColor,
+                                        ),
+                                      ],
+                                      if (isCorrectOption) ...[
+                                        const SizedBox(width: 4),
+                                        Icon(
+                                          Icons.check_circle,
+                                          size: 12,
+                                          color: AppColors.successColor,
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      const SizedBox(width: 28), // Align with option text
+                                      Expanded(
+                                        flex: 3,
+                                        child: Container(
+                                          height: 16,
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey[200],
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: FractionallySizedBox(
+                                            widthFactor: percentage / 100,
+                                            alignment: Alignment.centerLeft,
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                color: barColor.withOpacity(0.8),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        '${percentage.toStringAsFixed(0)}%',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: barColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
 
             // Tags
             if (result.tags.isNotEmpty) ...[
@@ -1115,6 +1542,7 @@ class ExamResults {
   final List<QuestionResult> questionResults;
   final List<CategoryScore> categoryScores;
   final List<WeakArea> weakAreas;
+  final Map<String, HierarchicalCategory> hierarchicalCategories;
 
   ExamResults({
     required this.totalQuestions,
@@ -1124,7 +1552,24 @@ class ExamResults {
     required this.questionResults,
     required this.categoryScores,
     required this.weakAreas,
+    required this.hierarchicalCategories,
   });
+}
+
+class HierarchicalCategory {
+  final String name;
+  final int totalCorrect;
+  final int totalQuestions;
+  final Map<int, CategoryScore> levels;
+
+  HierarchicalCategory({
+    required this.name,
+    required this.totalCorrect,
+    required this.totalQuestions,
+    required this.levels,
+  });
+
+  double get percentage => totalQuestions > 0 ? (totalCorrect / totalQuestions) * 100 : 0;
 }
 
 class QuestionResult {

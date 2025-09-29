@@ -6,6 +6,7 @@ import 'package:egg_toeic/data/models/simple_models.dart';
 import 'package:egg_toeic/data/models/wrong_answer_model.dart';
 import 'package:egg_toeic/data/models/learning_session_model.dart';
 import 'package:egg_toeic/data/models/achievement_model.dart';
+import 'package:egg_toeic/data/models/exam_result_model.dart';
 import 'package:egg_toeic/providers/repository_providers.dart';
 
 // Use the simple question model as Question
@@ -381,3 +382,61 @@ class AchievementsNotifier
     await _loadAchievements();
   }
 }
+
+// Exam Results Providers
+final examResultsProvider = FutureProvider<List<ExamResult>>((ref) async {
+  final repository = ref.read(userDataRepositoryProvider);
+  return await repository.getAllExamResults();
+});
+
+// Combined Statistics Model
+class CombinedStatistics {
+  final int totalQuestionsAnswered;
+  final int totalCorrectAnswers;
+  final double overallAccuracy;
+  final int practiceQuestionsAnswered;
+  final int examQuestionsAnswered;
+
+  const CombinedStatistics({
+    required this.totalQuestionsAnswered,
+    required this.totalCorrectAnswers,
+    required this.overallAccuracy,
+    required this.practiceQuestionsAnswered,
+    required this.examQuestionsAnswered,
+  });
+}
+
+// Combined Statistics Provider
+final combinedStatisticsProvider = FutureProvider<CombinedStatistics>((ref) async {
+  // Get practice statistics from user progress
+  final userProgress = await ref.read(userProgressProvider.future);
+
+  // Get exam results
+  final examResults = await ref.read(examResultsProvider.future);
+
+  // Calculate exam statistics
+  int examQuestionsAnswered = 0;
+  int examCorrectAnswers = 0;
+
+  for (final examResult in examResults) {
+    examQuestionsAnswered += examResult.userAnswers.length;
+    for (int i = 0; i < examResult.userAnswers.length && i < examResult.questions.length; i++) {
+      if (examResult.userAnswers[i] == examResult.questions[i].correctAnswerIndex) {
+        examCorrectAnswers++;
+      }
+    }
+  }
+
+  // Combine practice and exam statistics
+  final totalQuestions = userProgress.totalQuestionsAnswered + examQuestionsAnswered;
+  final totalCorrect = userProgress.correctAnswers + examCorrectAnswers;
+  final overallAccuracy = totalQuestions > 0 ? (totalCorrect / totalQuestions) * 100 : 0.0;
+
+  return CombinedStatistics(
+    totalQuestionsAnswered: totalQuestions,
+    totalCorrectAnswers: totalCorrect,
+    overallAccuracy: overallAccuracy,
+    practiceQuestionsAnswered: userProgress.totalQuestionsAnswered,
+    examQuestionsAnswered: examQuestionsAnswered,
+  );
+});

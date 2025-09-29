@@ -47,6 +47,7 @@ class SimpleQuestionRepositoryImpl implements QuestionRepository {
         difficultyLevel: difficultyLevel,
         explanation: '"Is" is the correct form of the verb "to be" for singular subjects.',
         grammarPoint: 'Subject-Verb Agreement',
+        questionType: 'grammar',
       ),
       SimpleQuestion(
         id: '2',
@@ -56,6 +57,7 @@ class SimpleQuestionRepositoryImpl implements QuestionRepository {
         difficultyLevel: difficultyLevel,
         explanation: 'Future tense "will publish" indicates an action that will happen in the future.',
         grammarPoint: 'Future Tense',
+        questionType: 'grammar',
       ),
     ];
   }
@@ -132,6 +134,7 @@ class SimpleQuestionRepositoryImpl implements QuestionRepository {
           difficultyLevel: 1,
           explanation: 'Mock explanation for demonstration.',
           grammarPoint: 'Subject-Verb Agreement',
+          questionType: 'grammar',
           createdAt: date,
         ),
       ];
@@ -168,6 +171,7 @@ class SimpleQuestionRepositoryImpl implements QuestionRepository {
         difficultyLevel: 1,
         explanation: 'Mock explanation for demonstration.',
         grammarPoint: 'Subject-Verb Agreement',
+        questionType: 'grammar',
         createdAt: DateTime.parse(date),
       ),
       SimpleQuestion(
@@ -178,6 +182,7 @@ class SimpleQuestionRepositoryImpl implements QuestionRepository {
         difficultyLevel: 1,
         explanation: 'Third person singular requires "goes".',
         grammarPoint: 'Subject-Verb Agreement',
+        questionType: 'grammar',
         createdAt: DateTime.parse(date),
       ),
     ];
@@ -204,26 +209,29 @@ class SimpleQuestionRepositoryImpl implements QuestionRepository {
         difficultyLevel: 1,
         explanation: 'The company is singular, so "is" is correct.',
         grammarPoint: 'Subject-Verb Agreement',
+        questionType: 'grammar',
         createdAt: DateTime.now(),
       ),
       SimpleQuestion(
         id: 'EXAM_T${testNumber}_L2_VOC_Q${DateTime.now().millisecondsSinceEpoch + 1}_0',
-        questionText: 'Mock question for $round - He _____ finished the report yet.',
-        options: ['has not', 'have not', 'did not', 'will not'],
+        questionText: 'Mock question for $round - The meeting was quite _____ and productive.',
+        options: ['efficient', 'deficient', 'proficient', 'sufficient'],
         correctAnswerIndex: 0,
         difficultyLevel: 2,
-        explanation: 'Present perfect with "yet" requires "has not".',
-        grammarPoint: 'Present Perfect',
+        explanation: '"Efficient" means working in a well-organized way.',
+        grammarPoint: 'Vocabulary',
+        questionType: 'vocabulary',
         createdAt: DateTime.now(),
       ),
       SimpleQuestion(
-        id: 'EXAM_T${testNumber}_L3_GRAM_Q${DateTime.now().millisecondsSinceEpoch + 2}_0',
+        id: 'EXAM_T${testNumber}_L1_GRAM_Q${DateTime.now().millisecondsSinceEpoch + 2}_0',
         questionText: 'Mock question for $round - The proposal _____ reviewed by the board.',
         options: ['will be', 'would be', 'has been', 'is being'],
         correctAnswerIndex: 0,
-        difficultyLevel: 3,
+        difficultyLevel: 1,
         explanation: 'Future passive voice is correct here.',
         grammarPoint: 'Passive Voice',
+        questionType: 'grammar',
         createdAt: DateTime.now(),
       ),
     ];

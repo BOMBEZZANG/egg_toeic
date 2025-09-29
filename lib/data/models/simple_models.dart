@@ -21,6 +21,7 @@ class SimpleQuestion extends Equatable {
   final int difficultyLevel;
   final String explanation;
   final String grammarPoint;
+  final String questionType;  // 'grammar' or 'vocabulary'
   final List<String>? tags;
   final DateTime? createdAt;
   final bool isBookmarked;
@@ -33,6 +34,7 @@ class SimpleQuestion extends Equatable {
     required this.difficultyLevel,
     required this.explanation,
     required this.grammarPoint,
+    required this.questionType,
     this.tags,
     this.createdAt,
     this.isBookmarked = false,
@@ -86,6 +88,7 @@ class SimpleQuestion extends Equatable {
         difficultyLevel: data['difficultyLevel'] as int? ?? 1,
         explanation: data['explanation'] as String? ?? 'No explanation provided',
         grammarPoint: data['grammarPoint'] as String? ?? 'Grammar',
+        questionType: data['questionType'] as String? ?? 'grammar',
         tags: _extractTags(data['tags']),
         createdAt: data['createdAt'] != null
             ? (data['createdAt'] is String
@@ -110,8 +113,42 @@ class SimpleQuestion extends Equatable {
       'difficultyLevel': difficultyLevel,
       'explanation': explanation,
       'grammarPoint': grammarPoint,
+      'questionType': questionType,
       'tags': tags,
       'createdAt': createdAt?.toIso8601String(),
+    };
+  }
+
+  // Add JSON serialization methods for Hive storage
+  factory SimpleQuestion.fromJson(Map<String, dynamic> json) {
+    return SimpleQuestion(
+      id: json['id'] as String,
+      questionText: json['questionText'] as String? ?? 'Question text missing',
+      options: List<String>.from(json['options'] as List? ?? []),
+      correctAnswerIndex: json['correctAnswerIndex'] as int? ?? 0,
+      difficultyLevel: json['difficultyLevel'] as int? ?? 1,
+      explanation: json['explanation'] as String? ?? 'No explanation provided',
+      grammarPoint: json['grammarPoint'] as String? ?? 'Grammar',
+      questionType: json['questionType'] as String? ?? 'grammar',
+      tags: json['tags'] != null ? List<String>.from(json['tags'] as List) : null,
+      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : null,
+      isBookmarked: json['isBookmarked'] as bool? ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'questionText': questionText,
+      'options': options,
+      'correctAnswerIndex': correctAnswerIndex,
+      'difficultyLevel': difficultyLevel,
+      'explanation': explanation,
+      'grammarPoint': grammarPoint,
+      'questionType': questionType,
+      'tags': tags,
+      'createdAt': createdAt?.toIso8601String(),
+      'isBookmarked': isBookmarked,
     };
   }
 
@@ -124,6 +161,7 @@ class SimpleQuestion extends Equatable {
         difficultyLevel,
         explanation,
         grammarPoint,
+        questionType,
         tags,
         createdAt,
         isBookmarked,

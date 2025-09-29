@@ -5,6 +5,7 @@ import 'package:egg_toeic/data/models/user_progress_model.dart';
 import 'package:egg_toeic/data/models/wrong_answer_model.dart';
 import 'package:egg_toeic/data/models/learning_session_model.dart';
 import 'package:egg_toeic/data/models/achievement_model.dart';
+import 'package:egg_toeic/data/models/exam_result_model.dart';
 import 'package:egg_toeic/data/repositories/base_repository.dart';
 import 'package:egg_toeic/data/repositories/user_data_repository.dart';
 import 'package:egg_toeic/core/services/anonymous_user_service.dart';
@@ -45,6 +46,7 @@ class TempUserDataRepositoryImpl implements UserDataRepository {
   List<LearningSession> _sessions = [];
   List<String> _favorites = [];
   List<Achievement> _achievements = Achievement.getDefaultAchievements();
+  List<ExamResult> _examResults = [];
   LearningSession? _currentSession;
 
   @override
@@ -365,6 +367,35 @@ class TempUserDataRepositoryImpl implements UserDataRepository {
 
     // Check for new achievements
     await checkForNewAchievements();
+  }
+
+  // Exam Results methods (in-memory implementation)
+  @override
+  Future<void> saveExamResult(ExamResult examResult) async {
+    // Remove any existing result for the same round (keep only latest)
+    _examResults.removeWhere((result) => result.examRound == examResult.examRound);
+
+    // Add the new result
+    _examResults.add(examResult);
+
+    print('💾 Saved exam result for ${examResult.examRound} (in-memory). Total results: ${_examResults.length}');
+  }
+
+  @override
+  Future<ExamResult?> getExamResult(String examRound) async {
+    try {
+      return _examResults
+          .where((result) => result.examRound == examRound)
+          .cast<ExamResult?>()
+          .firstWhere((result) => result != null, orElse: () => null);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  @override
+  Future<List<ExamResult>> getAllExamResults() async {
+    return List.from(_examResults);
   }
 }
 

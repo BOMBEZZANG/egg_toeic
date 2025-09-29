@@ -4,6 +4,7 @@ import 'package:egg_toeic/data/models/user_progress_model.dart';
 import 'package:egg_toeic/data/models/wrong_answer_model.dart';
 import 'package:egg_toeic/data/models/learning_session_model.dart';
 import 'package:egg_toeic/data/models/achievement_model.dart';
+import 'package:egg_toeic/data/models/exam_result_model.dart';
 import 'package:egg_toeic/data/repositories/base_repository.dart';
 import 'package:egg_toeic/core/services/anonymous_user_service.dart';
 
@@ -47,6 +48,11 @@ abstract class UserDataRepository extends BaseRepository {
   Future<void> updateAchievement(Achievement achievement);
   Future<List<Achievement>> checkForNewAchievements();
 
+  // Exam Results
+  Future<void> saveExamResult(ExamResult examResult);
+  Future<ExamResult?> getExamResult(String examRound);
+  Future<List<ExamResult>> getAllExamResults();
+
   // Question Results
   Future<void> updateQuestionResult({
     required String questionId,
@@ -62,6 +68,7 @@ class UserDataRepositoryImpl implements UserDataRepository {
   Box<dynamic>? _sessionsBox;
   Box<dynamic>? _favoritesBox;
   Box<dynamic>? _achievementsBox;
+  Box<dynamic>? _examResultsBox;
 
   LearningSession? _currentSession;
 
@@ -71,6 +78,7 @@ class UserDataRepositoryImpl implements UserDataRepository {
   List<LearningSession> _sessions = [];
   List<String> _favorites = [];
   List<Achievement> _achievements = Achievement.getDefaultAchievements();
+  List<ExamResult> _examResults = [];
 
   bool _hiveInitialized = false;
 
@@ -85,6 +93,7 @@ class UserDataRepositoryImpl implements UserDataRepository {
       _sessionsBox = await Hive.openBox<dynamic>(HiveConstants.sessionsBox);
       _favoritesBox = await Hive.openBox<dynamic>(HiveConstants.favoritesBox);
       _achievementsBox = await Hive.openBox<dynamic>('achievements_box');
+      _examResultsBox = await Hive.openBox<dynamic>('exam_results_box');
 
       // Load existing data from Hive or initialize with defaults
       await _loadFromHive();
@@ -133,8 +142,10 @@ class UserDataRepositoryImpl implements UserDataRepository {
         _sessions = sessionsJson
             .map((json) => LearningSession.fromJson(Map<String, dynamic>.from(json)))
             .toList();
+        print('📚 Loaded ${_sessions.length} sessions from Hive storage');
       } else {
         _sessions = [];
+        print('📚 No sessions found in Hive storage, starting with empty list');
       }
 
       // Load achievements
@@ -146,6 +157,18 @@ class UserDataRepositoryImpl implements UserDataRepository {
       } else {
         _achievements = Achievement.getDefaultAchievements();
         await _saveAchievementsToHive();
+      }
+
+      // Load exam results
+      final examResultsJson = _examResultsBox?.get('examResults');
+      if (examResultsJson != null && examResultsJson is List) {
+        _examResults = examResultsJson
+            .map((json) => ExamResult.fromJson(Map<String, dynamic>.from(json)))
+            .toList();
+        print('📚 Loaded ${_examResults.length} exam results from Hive storage');
+      } else {
+        _examResults = [];
+        print('📚 No exam results found in Hive storage, starting with empty list');
       }
 
       print('📚 Loaded ${_wrongAnswers.length} wrong answers from Hive storage');
@@ -162,6 +185,7 @@ class UserDataRepositoryImpl implements UserDataRepository {
       await _sessionsBox?.close();
       await _favoritesBox?.close();
       await _achievementsBox?.close();
+      await _examResultsBox?.close();
     } catch (e) {
       print('❌ Error disposing Hive boxes: $e');
     }
@@ -317,6 +341,18 @@ class UserDataRepositoryImpl implements UserDataRepository {
     }
   }
 
+  Future<void> _saveSessionsToHive() async {
+    if (_hiveInitialized && _sessionsBox != null) {
+      try {
+        final sessionsJson = _sessions.map((session) => session.toJson()).toList();
+        await _sessionsBox!.put('sessions', sessionsJson);
+        print('💾 Saved ${sessionsJson.length} sessions to Hive');
+      } catch (e) {
+        print('❌ Error saving sessions to Hive: $e');
+      }
+    }
+  }
+
   @override
   Future<List<WrongAnswer>> getWrongAnswersNeedingReview() async {
     return _wrongAnswers.where((wa) => wa.needsReview).toList();
@@ -345,6 +381,8 @@ class UserDataRepositoryImpl implements UserDataRepository {
     if (_currentSession != null) {
       _sessions.add(_currentSession!.complete());
       _currentSession = null;
+      await _saveSessionsToHive(); // Save sessions to Hive after adding new one
+      print('💾 Session ended and saved to Hive. Total sessions: ${_sessions.length}');
     }
   }
 
@@ -508,5 +546,49 @@ class UserDataRepositoryImpl implements UserDataRepository {
 
     // Check for new achievements
     await checkForNewAchievements();
+  }
+
+  // Exam Results methods
+  @override
+  Future<void> saveExamResult(ExamResult examResult) async {
+    // Remove any existing result for the same round (keep only latest)
+    _examResults.removeWhere((result) => result.examRound == examResult.examRound);
+
+    // Add the new result
+    _examResults.add(examResult);
+
+    // Save to Hive
+    await _saveExamResultsToHive();
+
+    print('💾 Saved exam result for ${examResult.examRound}. Total results: ${_examResults.length}');
+  }
+
+  @override
+  Future<ExamResult?> getExamResult(String examRound) async {
+    try {
+      return _examResults
+          .where((result) => result.examRound == examRound)
+          .cast<ExamResult?>()
+          .firstWhere((result) => result != null, orElse: () => null);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  @override
+  Future<List<ExamResult>> getAllExamResults() async {
+    return List.from(_examResults);
+  }
+
+  Future<void> _saveExamResultsToHive() async {
+    if (_hiveInitialized && _examResultsBox != null) {
+      try {
+        final examResultsJson = _examResults.map((result) => result.toJson()).toList();
+        await _examResultsBox!.put('examResults', examResultsJson);
+        print('💾 Saved ${examResultsJson.length} exam results to Hive');
+      } catch (e) {
+        print('❌ Error saving exam results to Hive: $e');
+      }
+    }
   }
 }

@@ -430,8 +430,8 @@ class QuestionRepositoryImpl implements QuestionRepository {
           .get();
 
       if (!dailyMetadataDoc.exists) {
-        print('❌ Daily metadata not found for date: $date');
-        return await _generateFallbackQuestionsForDate(date);
+        print('❌ Daily metadata not found for date: $date - no questions available');
+        return []; // Return empty list instead of generating fallback questions
       }
 
       final dailyData = dailyMetadataDoc.data()!;
@@ -441,24 +441,25 @@ class QuestionRepositoryImpl implements QuestionRepository {
       print('📋 Found ${questionIds.length} question IDs for date $date: $questionIds');
 
       if (questionIds.isEmpty) {
-        return await _generateFallbackQuestionsForDate(date);
+        print('❌ No question IDs found for date: $date - no questions available');
+        return []; // Return empty list instead of generating fallback questions
       }
 
       // Fetch questions by IDs
       final questions = await getQuestionsByIds(questionIds, mode: 'practice');
       print('✅ Successfully fetched ${questions.length} questions for date $date');
 
-      // If we got no questions from the metadata IDs, generate fallback
+      // If we got no questions from the metadata IDs, return empty list
       if (questions.isEmpty) {
-        print('⚠️ No questions found from metadata IDs, generating fallback questions for date $date');
-        return await _generateFallbackQuestionsForDate(date);
+        print('⚠️ No questions found from metadata IDs for date $date - no questions available');
+        return []; // Return empty list instead of generating fallback questions
       }
 
       return questions;
 
     } catch (e) {
-      print('❌ Error fetching practice questions for date $date: $e');
-      return await _generateFallbackQuestionsForDate(date);
+      print('❌ Error fetching practice questions for date $date: $e - no questions available');
+      return []; // Return empty list instead of generating fallback questions
     }
   }
 

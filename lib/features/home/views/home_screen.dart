@@ -13,6 +13,7 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userProgressAsync = ref.watch(userProgressProvider);
+    final combinedStatsAsync = ref.watch(combinedStatisticsProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -35,7 +36,11 @@ class HomeScreen extends ConsumerWidget {
 
               // Quick Stats
               SliverToBoxAdapter(
-                child: _buildQuickStats(context, userProgress),
+                child: combinedStatsAsync.when(
+                  loading: () => _buildQuickStats(context, userProgress, null),
+                  error: (error, stack) => _buildQuickStats(context, userProgress, null),
+                  data: (combinedStats) => _buildQuickStats(context, userProgress, combinedStats),
+                ),
               ),
 
               // Main Menu Cards (Duolingo bubble style)
@@ -473,7 +478,7 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildQuickStats(BuildContext context, userProgress) {
+  Widget _buildQuickStats(BuildContext context, userProgress, combinedStats) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
@@ -482,7 +487,9 @@ class HomeScreen extends ConsumerWidget {
             child: _buildCuteStatCard(
               context,
               title: '총 학습한 문제',
-              value: userProgress.totalQuestionsAnswered.toString(),
+              value: combinedStats != null
+                  ? combinedStats.totalQuestionsAnswered.toString()
+                  : userProgress.totalQuestionsAnswered.toString(),
               emoji: '📚',
               color: const Color(0xFF1CB0F6), // Duolingo blue
             ),
@@ -492,7 +499,9 @@ class HomeScreen extends ConsumerWidget {
             child: _buildCuteStatCard(
               context,
               title: '정답률',
-              value: '${userProgress.accuracyPercentage.toInt()}%',
+              value: combinedStats != null
+                  ? '${combinedStats.overallAccuracy.toInt()}%'
+                  : '${userProgress.accuracyPercentage.toInt()}%',
               emoji: '🎯',
               color: const Color(0xFF58CC02), // Duolingo green
             ),

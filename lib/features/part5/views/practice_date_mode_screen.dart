@@ -324,14 +324,61 @@ class _PracticeDateModeScreenState extends ConsumerState<PracticeDateModeScreen>
               backgroundColor: AppColors.primaryColor,
               foregroundColor: Colors.white,
             ),
-            body: const SafeArea(
+            body: SafeArea(
               child: Center(
                 child: Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Text(
-                    'No questions available for this date.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16),
+                  padding: const EdgeInsets.all(40),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.free_breakfast,
+                        size: 80,
+                        color: Colors.grey[400],
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        '해당 날짜는 휴무!',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        '이 날짜에는 연습 문제가 없습니다.\n다른 날짜를 선택해 주세요.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[500],
+                          height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      ElevatedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 32,
+                            vertical: 16,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          '달력으로 돌아가기',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -736,7 +783,8 @@ class _PracticeDateModeScreenState extends ConsumerState<PracticeDateModeScreen>
                                         AppColors.primaryColor.withOpacity(0.3),
                                   ),
                                 ),
-                                child: Column(
+                                child: SingleChildScrollView(
+                                  child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     // Analytics Section with offline fallback
@@ -890,29 +938,95 @@ class _PracticeDateModeScreenState extends ConsumerState<PracticeDateModeScreen>
                                         height: 1.5,
                                       ),
                                     ),
-                                    if (currentQuestion
-                                            .grammarPoint?.isNotEmpty ==
-                                        true) ...[
-                                      const SizedBox(height: 12),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 12, vertical: 6),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.primaryColor,
-                                          borderRadius:
-                                              BorderRadius.circular(20),
-                                        ),
-                                        child: Text(
-                                          currentQuestion.grammarPoint!,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
+
+                                    // Tags row for difficulty level and question type
+                                    const SizedBox(height: 16),
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: [
+                                        // Difficulty Level Tag
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 12, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: _getDifficultyColor(currentQuestion.difficultyLevel),
+                                            borderRadius:
+                                                BorderRadius.circular(20),
+                                          ),
+                                          child: Text(
+                                            'Level ${currentQuestion.difficultyLevel}',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    ],
+
+                                        // Question Type Tag (inferred from grammar point)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 12, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: _getQuestionTypeColor(_inferQuestionType(currentQuestion.grammarPoint)),
+                                            borderRadius:
+                                                BorderRadius.circular(20),
+                                          ),
+                                          child: Text(
+                                            _inferQuestionType(currentQuestion.grammarPoint),
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+
+                                        // Grammar Point/Question Category Tag
+                                        if (currentQuestion.grammarPoint?.isNotEmpty == true)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 6),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.primaryColor,
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                            child: Text(
+                                              currentQuestion.grammarPoint!,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+
+                                        // Additional tags if available
+                                        if (currentQuestion.tags?.isNotEmpty == true)
+                                          ...currentQuestion.tags!.map((tag) => Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 6),
+                                            decoration: BoxDecoration(
+                                              color: Colors.grey[600],
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                            child: Text(
+                                              tag,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          )),
+                                      ],
+                                    ),
+
                                   ],
+                                ),
                                 ),
                               ),
                             ),
@@ -986,6 +1100,54 @@ class _PracticeDateModeScreenState extends ConsumerState<PracticeDateModeScreen>
           ),
         );
       }
+    }
+  }
+
+  // Helper method to get color based on difficulty level
+  Color _getDifficultyColor(int level) {
+    switch (level) {
+      case 1:
+        return const Color(0xFF4CAF50); // Green for easy
+      case 2:
+        return const Color(0xFFFF9800); // Orange for medium
+      case 3:
+        return const Color(0xFFF44336); // Red for hard
+      default:
+        return Colors.grey;
+    }
+  }
+
+  // Helper method to infer question type from grammar point
+  String _inferQuestionType(String? grammarPoint) {
+    if (grammarPoint == null || grammarPoint.isEmpty) {
+      return 'Grammar';
+    }
+
+    // Common vocabulary keywords
+    const vocabularyKeywords = [
+      'vocabulary', 'word', 'meaning', 'synonym', 'antonym',
+      'definition', 'phrase', 'idiom', 'expression'
+    ];
+
+    final lowerGrammarPoint = grammarPoint.toLowerCase();
+    for (final keyword in vocabularyKeywords) {
+      if (lowerGrammarPoint.contains(keyword)) {
+        return 'Vocabulary';
+      }
+    }
+
+    return 'Grammar';
+  }
+
+  // Helper method to get color based on question type
+  Color _getQuestionTypeColor(String questionType) {
+    switch (questionType.toLowerCase()) {
+      case 'vocabulary':
+        return const Color(0xFF9C27B0); // Purple for vocabulary
+      case 'grammar':
+        return const Color(0xFF2196F3); // Blue for grammar
+      default:
+        return const Color(0xFF607D8B); // Blue-grey for unknown
     }
   }
 }

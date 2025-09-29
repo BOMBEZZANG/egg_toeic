@@ -10,6 +10,7 @@ import 'package:egg_toeic/providers/repository_providers.dart';
 import 'package:egg_toeic/core/widgets/question_analytics_widget.dart';
 import 'package:egg_toeic/data/models/question_model.dart' as question_model;
 import 'package:egg_toeic/core/services/anonymous_user_service.dart';
+import 'package:egg_toeic/core/widgets/custom_app_bar.dart';
 
 class PracticeModeScreen extends ConsumerStatefulWidget {
   final int difficultyLevel;
@@ -88,8 +89,8 @@ class _PracticeModeScreenState extends ConsumerState<PracticeModeScreen>
   Widget build(BuildContext context) {
     if (_questions.isEmpty) {
       return Scaffold(
-        appBar: AppBar(
-          title: Text('Level ${widget.difficultyLevel} Practice'),
+        appBar: CustomAppBar(
+          title: 'Level ${widget.difficultyLevel} Practice',
         ),
         body: const Center(
           child: CircularProgressIndicator(),

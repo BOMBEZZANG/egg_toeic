@@ -9,6 +9,7 @@ import 'package:egg_toeic/features/part5/views/practice_mode_screen.dart';
 import 'package:egg_toeic/features/part5/views/practice_date_mode_screen.dart';
 import 'package:egg_toeic/features/part5/views/practice_calendar_screen.dart';
 import 'package:egg_toeic/features/part5/views/exam_result_screen.dart';
+import 'package:egg_toeic/features/part5/views/exam_result_summary_screen.dart';
 import 'package:egg_toeic/features/bookmarks/views/bookmarks_screen.dart';
 import 'package:egg_toeic/features/part5/views/exam_mode_screen.dart';
 import 'package:egg_toeic/features/part5/views/explanation_screen.dart';
@@ -19,6 +20,7 @@ import 'package:egg_toeic/features/wrong_answers/views/wrong_answers_screen.dart
 import 'package:egg_toeic/features/wrong_answers/views/retake_question_screen.dart';
 import 'package:egg_toeic/data/models/simple_models.dart';
 import 'package:egg_toeic/data/models/wrong_answer_model.dart';
+import 'package:egg_toeic/data/models/learning_session_model.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -90,6 +92,17 @@ final routerProvider = Provider<GoRouter>((ref) {
                 userAnswers: extra['userAnswers'] as List<int>,
                 examStartTime: extra['examStartTime'] as DateTime,
                 examEndTime: extra['examEndTime'] as DateTime,
+              );
+            },
+          ),
+          GoRoute(
+            path: 'exam-result-summary',
+            name: 'exam-result-summary',
+            builder: (context, state) {
+              final extra = state.extra as Map<String, dynamic>;
+              return ExamResultSummaryScreen(
+                round: extra['round'] as String,
+                session: extra['session'] as LearningSession,
               );
             },
           ),

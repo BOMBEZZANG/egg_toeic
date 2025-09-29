@@ -6,7 +6,11 @@ import 'package:egg_toeic/core/constants/app_colors.dart';
 import 'package:egg_toeic/providers/repository_providers.dart';
 import 'package:egg_toeic/data/models/simple_models.dart';
 import 'package:egg_toeic/data/models/wrong_answer_model.dart';
+import 'package:egg_toeic/data/models/exam_result_model.dart';
+import 'package:egg_toeic/data/models/question_model.dart' as question_model;
+import 'package:egg_toeic/core/services/anonymous_user_service.dart';
 import 'package:egg_toeic/providers/app_providers.dart';
+import 'package:egg_toeic/core/widgets/custom_app_bar.dart';
 
 class ExamModeScreen extends ConsumerStatefulWidget {
   final String round;
@@ -45,6 +49,9 @@ class _ExamModeScreenState extends ConsumerState<ExamModeScreen> {
           _isLoading = false;
           _examStartTime = DateTime.now();
         });
+
+        // Start exam session
+        _startExamSession();
       }
     } catch (e) {
       if (mounted) {
@@ -56,10 +63,56 @@ class _ExamModeScreenState extends ConsumerState<ExamModeScreen> {
     }
   }
 
-  void _selectAnswer(int answerIndex) {
+  void _selectAnswer(int answerIndex) async {
     setState(() {
       _userAnswers[_currentQuestionIndex] = answerIndex;
     });
+
+    // Submit analytics for this answer
+    await _submitAnswerAnalytics(answerIndex);
+  }
+
+  // Submit user answer analytics to Firebase
+  Future<void> _submitAnswerAnalytics(int selectedAnswerIndex) async {
+    try {
+      final currentQuestion = _questions[_currentQuestionIndex];
+
+      // Get anonymous user ID
+      final anonymousUserId = AnonymousUserService.getAnonymousUserId();
+
+      // Check if this is the first attempt for this question
+      final isFirstAttempt = !AnonymousUserService.hasAnsweredBefore(currentQuestion.id);
+
+      final analyticsRepo = ref.read(analyticsRepositoryProvider);
+      await analyticsRepo.submitAnswer(
+        userId: anonymousUserId,
+        question: question_model.Question(
+          id: currentQuestion.id,
+          questionText: currentQuestion.questionText,
+          options: currentQuestion.options,
+          correctAnswerIndex: currentQuestion.correctAnswerIndex,
+          explanation: currentQuestion.explanation,
+          grammarPoint: currentQuestion.grammarPoint,
+          difficultyLevel: currentQuestion.difficultyLevel,
+        ),
+        selectedAnswerIndex: selectedAnswerIndex,
+        sessionId: 'exam_${widget.round}_${DateTime.now().millisecondsSinceEpoch}',
+        timeSpentSeconds: null, // Could track time if needed
+        metadata: {
+          'examRound': widget.round,
+          'questionNumber': _currentQuestionIndex + 1,
+        },
+        isFirstAttempt: isFirstAttempt,
+      );
+
+      // Mark as answered in anonymous user service
+      AnonymousUserService.markAsAnswered(currentQuestion.id);
+
+      print('✅ Submitted analytics for exam question ${currentQuestion.id}');
+    } catch (e) {
+      print('❌ Error submitting answer analytics: $e');
+      // Don't block the user experience if analytics fail
+    }
   }
 
   void _nextQuestion() {
@@ -79,7 +132,15 @@ class _ExamModeScreenState extends ConsumerState<ExamModeScreen> {
   }
 
   void _finishExam() async {
+    final examEndTime = DateTime.now();
+
     await _saveWrongAnswers();
+
+    // Save detailed exam result for future access
+    await _saveDetailedExamResult(examEndTime);
+
+    // End exam session
+    await _endExamSession();
 
     // Navigate to comprehensive result screen
     context.push('/part5/exam-result', extra: {
@@ -87,8 +148,56 @@ class _ExamModeScreenState extends ConsumerState<ExamModeScreen> {
       'questions': _questions,
       'userAnswers': _userAnswers,
       'examStartTime': _examStartTime!,
-      'examEndTime': DateTime.now(),
+      'examEndTime': examEndTime,
     });
+  }
+
+  // Start exam learning session
+  Future<void> _startExamSession() async {
+    try {
+      final userDataRepo = ref.read(userDataRepositoryProvider);
+
+      // Create a custom session with round information
+      // We'll use the updateCurrentSession to add round info to the session
+      await userDataRepo.startNewSession(sessionType: 'exam');
+
+      // Add the round information to the session by updating questionId with round info
+      await userDataRepo.updateCurrentSession(
+        questionId: 'EXAM_${widget.round}_START',
+      );
+
+      print('✅ Started exam session for ${widget.round}');
+    } catch (e) {
+      print('❌ Error starting exam session: $e');
+    }
+  }
+
+  // End exam learning session with completion status
+  Future<void> _endExamSession() async {
+    try {
+      final userDataRepo = ref.read(userDataRepositoryProvider);
+
+      // Calculate correct answers
+      int correctAnswers = 0;
+      for (int i = 0; i < _userAnswers.length; i++) {
+        if (_userAnswers[i] == _questions[i].correctAnswerIndex) {
+          correctAnswers++;
+        }
+      }
+
+      // Update session with completion data
+      await userDataRepo.updateCurrentSession(
+        questionsAnswered: _questions.length,
+        correctAnswers: correctAnswers,
+      );
+
+      // End the session as completed
+      await userDataRepo.endCurrentSession();
+
+      print('✅ Ended exam session for ${widget.round} - $correctAnswers/${_questions.length} correct');
+    } catch (e) {
+      print('❌ Error ending exam session: $e');
+    }
   }
 
   int _calculateScore() {
@@ -167,12 +276,32 @@ class _ExamModeScreenState extends ConsumerState<ExamModeScreen> {
     return 'Grammar Review';
   }
 
+  // Save detailed exam result for future access via '결과보기' button
+  Future<void> _saveDetailedExamResult(DateTime examEndTime) async {
+    try {
+      final userDataRepo = ref.read(userDataRepositoryProvider);
+
+      final examResult = ExamResult.create(
+        examRound: widget.round,
+        questions: _questions,
+        userAnswers: _userAnswers,
+        examStartTime: _examStartTime!,
+        examEndTime: examEndTime,
+      );
+
+      await userDataRepo.saveExamResult(examResult);
+
+      print('✅ Saved detailed exam result for ${widget.round}');
+    } catch (e) {
+      print('❌ Error saving detailed exam result: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title:
-            Text('Exam Mode - ${widget.round.replaceAll('ROUND_', 'Round ')}'),
+      appBar: CustomAppBar(
+        title: 'Exam Mode - ${widget.round.replaceAll('ROUND_', 'Round ')}',
         backgroundColor: Colors.orange,
         foregroundColor: Colors.white,
         actions: [
