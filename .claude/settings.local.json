@@ -19,7 +19,14 @@
       "Bash(/mnt/c/flutter/flutter/bin/flutter analyze)",
       "Bash(/mnt/c/flutter/flutter/bin/dart analyze lib/features/home/views/home_screen.dart)",
       "Bash(/mnt/c/flutter/flutter/bin/dart analyze lib/features/part5/views/practice_mode_screen.dart)",
-      "Bash(/mnt/c/flutter/flutter/bin/dart analyze lib/features/part5/views/practice_date_mode_screen.dart)"
+      "Bash(/mnt/c/flutter/flutter/bin/dart analyze lib/features/part5/views/practice_date_mode_screen.dart)",
+      "Bash(/mnt/c/flutter/flutter/bin/flutter pub get)",
+      "Bash(/mnt/c/flutter/flutter/bin/flutter analyze lib/core/routing/app_router.dart)",
+      "Bash(/mnt/c/flutter/flutter/bin/dart analyze lib/core/routing/app_router.dart)",
+      "Bash(/mnt/c/flutter/flutter/bin/flutter analyze lib/features/part5/views/exam_result_screen.dart)",
+      "Bash(/mnt/c/flutter/flutter/bin/dart analyze lib/features/part5/views/exam_result_screen.dart)",
+      "Bash(/mnt/c/flutter/flutter/bin/flutter analyze lib/features/statistics/views/statistics_achievements_screen.dart lib/providers/app_providers.dart)",
+      "Bash(/mnt/c/flutter/flutter/bin/dart analyze lib/features/statistics/views/statistics_achievements_screen.dart)"
     ],
     "deny": [],
     "ask": []

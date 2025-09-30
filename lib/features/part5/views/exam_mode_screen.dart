@@ -8,7 +8,7 @@ import 'package:egg_toeic/data/models/simple_models.dart';
 import 'package:egg_toeic/data/models/wrong_answer_model.dart';
 import 'package:egg_toeic/data/models/exam_result_model.dart';
 import 'package:egg_toeic/data/models/question_model.dart' as question_model;
-import 'package:egg_toeic/core/services/anonymous_user_service.dart';
+import 'package:egg_toeic/core/services/auth_service.dart';
 import 'package:egg_toeic/providers/app_providers.dart';
 import 'package:egg_toeic/core/widgets/custom_app_bar.dart';
 
@@ -28,6 +28,7 @@ class _ExamModeScreenState extends ConsumerState<ExamModeScreen> {
   int _currentQuestionIndex = 0;
   List<int> _userAnswers = [];
   DateTime? _examStartTime;
+  bool _isFinishing = false; // Prevent multiple finish calls
 
   @override
   void initState() {
@@ -77,15 +78,16 @@ class _ExamModeScreenState extends ConsumerState<ExamModeScreen> {
     try {
       final currentQuestion = _questions[_currentQuestionIndex];
 
-      // Get anonymous user ID
-      final anonymousUserId = AnonymousUserService.getAnonymousUserId();
+      // Get user ID from AuthService
+      final authService = AuthService();
+      final userId = authService.currentUserId;
 
-      // Check if this is the first attempt for this question
-      final isFirstAttempt = !AnonymousUserService.hasAnsweredBefore(currentQuestion.id);
+      // For exam mode, always consider as first attempt per session
+      final isFirstAttempt = true;
 
       final analyticsRepo = ref.read(analyticsRepositoryProvider);
       await analyticsRepo.submitAnswer(
-        userId: anonymousUserId,
+        userId: userId,
         question: question_model.Question(
           id: currentQuestion.id,
           questionText: currentQuestion.questionText,
@@ -104,9 +106,6 @@ class _ExamModeScreenState extends ConsumerState<ExamModeScreen> {
         },
         isFirstAttempt: isFirstAttempt,
       );
-
-      // Mark as answered in anonymous user service
-      AnonymousUserService.markAsAnswered(currentQuestion.id);
 
       print('✅ Submitted analytics for exam question ${currentQuestion.id}');
     } catch (e) {
@@ -132,24 +131,48 @@ class _ExamModeScreenState extends ConsumerState<ExamModeScreen> {
   }
 
   void _finishExam() async {
-    final examEndTime = DateTime.now();
+    // Prevent multiple calls
+    if (_isFinishing) {
+      print('⚠️ Finish already in progress, ignoring duplicate call');
+      return;
+    }
 
-    await _saveWrongAnswers();
-
-    // Save detailed exam result for future access
-    await _saveDetailedExamResult(examEndTime);
-
-    // End exam session
-    await _endExamSession();
-
-    // Navigate to comprehensive result screen
-    context.push('/part5/exam-result', extra: {
-      'examRound': widget.round,
-      'questions': _questions,
-      'userAnswers': _userAnswers,
-      'examStartTime': _examStartTime!,
-      'examEndTime': examEndTime,
+    setState(() {
+      _isFinishing = true;
     });
+
+    try {
+      final examEndTime = DateTime.now();
+
+      await _saveWrongAnswers();
+
+      // Save detailed exam result for future access
+      await _saveDetailedExamResult(examEndTime);
+
+      // End exam session
+      await _endExamSession();
+
+      // Small delay to ensure all data is flushed to disk
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      // Navigate to comprehensive result screen
+      if (mounted) {
+        context.push('/part5/exam-result', extra: {
+          'examRound': widget.round,
+          'questions': _questions,
+          'userAnswers': _userAnswers,
+          'examStartTime': _examStartTime!,
+          'examEndTime': examEndTime,
+        });
+      }
+    } catch (e) {
+      print('❌ Error finishing exam: $e');
+      if (mounted) {
+        setState(() {
+          _isFinishing = false;
+        });
+      }
+    }
   }
 
   // Start exam learning session
@@ -594,17 +617,28 @@ class _ExamModeScreenState extends ConsumerState<ExamModeScreen> {
               Expanded(
                 flex: _currentQuestionIndex == 0 ? 1 : 1,
                 child: ElevatedButton.icon(
-                  onPressed: selectedAnswer == -1
+                  onPressed: (selectedAnswer == -1 || _isFinishing)
                       ? null
                       : _currentQuestionIndex == _questions.length - 1
                           ? _finishExam
                           : _nextQuestion,
-                  icon: Icon(_currentQuestionIndex == _questions.length - 1
-                      ? Icons.check
-                      : Icons.arrow_forward),
-                  label: Text(_currentQuestionIndex == _questions.length - 1
-                      ? 'Finish Exam'
-                      : 'Next'),
+                  icon: _isFinishing
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : Icon(_currentQuestionIndex == _questions.length - 1
+                          ? Icons.check
+                          : Icons.arrow_forward),
+                  label: Text(_isFinishing
+                      ? 'Saving...'
+                      : _currentQuestionIndex == _questions.length - 1
+                          ? 'Finish Exam'
+                          : 'Next'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orange,
                     foregroundColor: Colors.white,

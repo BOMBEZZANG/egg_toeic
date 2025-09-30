@@ -9,7 +9,7 @@ import 'package:egg_toeic/providers/app_providers.dart';
 import 'package:egg_toeic/providers/repository_providers.dart';
 import 'package:egg_toeic/core/widgets/question_analytics_widget.dart';
 import 'package:egg_toeic/data/models/question_model.dart' as question_model;
-import 'package:egg_toeic/core/services/anonymous_user_service.dart';
+import 'package:egg_toeic/core/services/auth_service.dart';
 import 'package:egg_toeic/core/widgets/custom_app_bar.dart';
 
 class PracticeModeScreen extends ConsumerStatefulWidget {
@@ -736,15 +736,16 @@ class _PracticeModeScreenState extends ConsumerState<PracticeModeScreen>
 
     // Submit analytics data
     try {
-      // Get anonymous user ID
-      final anonymousUserId = AnonymousUserService.getAnonymousUserId();
+      // Get user ID from AuthService
+      final authService = AuthService();
+      final userId = authService.currentUserId;
 
-      // Check if this is the first attempt for this question
-      final isFirstAttempt = !AnonymousUserService.hasAnsweredBefore(currentQuestion.id);
+      // For practice mode, consider all attempts (analytics will handle first attempt tracking)
+      final isFirstAttempt = true;
 
       final analyticsRepo = ref.read(analyticsRepositoryProvider);
       await analyticsRepo.submitAnswer(
-        userId: anonymousUserId,
+        userId: userId,
         question: question_model.Question(
           id: currentQuestion.id,
           questionText: currentQuestion.questionText,
@@ -760,16 +761,8 @@ class _PracticeModeScreenState extends ConsumerState<PracticeModeScreen>
         isFirstAttempt: isFirstAttempt,
       );
 
-      // Mark as answered if this was the first attempt
-      if (isFirstAttempt) {
-        await AnonymousUserService.markAsAnswered(currentQuestion.id);
-        print('📝 Marked question ${currentQuestion.id} as answered (first attempt)');
-
-        // Invalidate the user progress provider to update home screen immediately
-        ref.invalidate(userProgressProvider);
-      }
-
-      print('✅ Analytics data submitted for question ${currentQuestion.id} (isFirstAttempt: $isFirstAttempt)');
+      // Analytics are now tracked with Firebase Auth UID
+      print('✅ Analytics data submitted for question ${currentQuestion.id}');
     } catch (e) {
       print('❌ Error submitting analytics: $e');
     }

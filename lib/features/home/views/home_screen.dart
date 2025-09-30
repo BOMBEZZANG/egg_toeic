@@ -38,8 +38,10 @@ class HomeScreen extends ConsumerWidget {
               SliverToBoxAdapter(
                 child: combinedStatsAsync.when(
                   loading: () => _buildQuickStats(context, userProgress, null),
-                  error: (error, stack) => _buildQuickStats(context, userProgress, null),
-                  data: (combinedStats) => _buildQuickStats(context, userProgress, combinedStats),
+                  error: (error, stack) =>
+                      _buildQuickStats(context, userProgress, null),
+                  data: (combinedStats) =>
+                      _buildQuickStats(context, userProgress, combinedStats),
                 ),
               ),
 
@@ -56,27 +58,48 @@ class HomeScreen extends ConsumerWidget {
                   delegate: SliverChildListDelegate([
                     _buildCuteMenuCard(
                       context,
+                      ref: ref,
                       title: 'Part 5',
                       subtitle: 'Grammar & Vocabulary',
                       emoji: '📝',
                       color: const Color(0xFF1CB0F6), // Duolingo blue
-                      onTap: () => context.push('/part5'),
+                      onTap: () async {
+                        await context.push('/part5');
+                        // Refresh data when returning from Part 5
+                        ref.invalidate(userProgressProvider);
+                        ref.invalidate(examResultsProvider);
+                        ref.invalidate(combinedStatisticsProvider);
+                      },
                     ),
                     _buildCuteMenuCard(
                       context,
+                      ref: ref,
                       title: '복습하기',
                       subtitle: 'Review & Practice',
                       emoji: '🔄',
                       color: const Color(0xFFFF9600), // Duolingo orange
-                      onTap: () => context.push('/review-select'),
+                      onTap: () async {
+                        await context.push('/review-select');
+                        // Refresh data when returning
+                        ref.invalidate(userProgressProvider);
+                        ref.invalidate(examResultsProvider);
+                        ref.invalidate(combinedStatisticsProvider);
+                      },
                     ),
                     _buildCuteMenuCard(
                       context,
+                      ref: ref,
                       title: '통계 & 업적',
                       subtitle: 'Progress & Achievements',
                       emoji: '📊',
                       color: const Color(0xFFCE82FF), // Duolingo purple
-                      onTap: () => context.push('/statistics-achievements'),
+                      onTap: () async {
+                        await context.push('/statistics-achievements');
+                        // Refresh data when returning
+                        ref.invalidate(userProgressProvider);
+                        ref.invalidate(examResultsProvider);
+                        ref.invalidate(combinedStatisticsProvider);
+                      },
                     ),
                   ]),
                 ),
@@ -379,7 +402,7 @@ class HomeScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      isCompleted ? '역시 너무 멋져! 🌟' : '화이팅 힘내자!⭐',
+                      isCompleted ? '역시 너무 멋져! 🌟' : '🌟연습문제 10개!🌟',
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.9),
                         fontSize: 14,
@@ -599,11 +622,12 @@ class HomeScreen extends ConsumerWidget {
 
   Widget _buildCuteMenuCard(
     BuildContext context, {
+    required WidgetRef ref,
     required String title,
     required String subtitle,
     required String emoji,
     required Color color,
-    required VoidCallback onTap,
+    required Future<void> Function() onTap,
   }) {
     return GestureDetector(
       onTap: onTap,

@@ -440,3 +440,191 @@ final combinedStatisticsProvider = FutureProvider<CombinedStatistics>((ref) asyn
     examQuestionsAnswered: examQuestionsAnswered,
   );
 });
+
+// Separate Statistics Model
+class SeparateStatistics {
+  final int practiceQuestionsAnswered;
+  final int practiceCorrectAnswers;
+  final double practiceAccuracy;
+  final int examQuestionsAnswered;
+  final int examCorrectAnswers;
+  final double examAccuracy;
+  final int totalQuestionsAnswered;
+  final int totalCorrectAnswers;
+  final double overallAccuracy;
+
+  const SeparateStatistics({
+    required this.practiceQuestionsAnswered,
+    required this.practiceCorrectAnswers,
+    required this.practiceAccuracy,
+    required this.examQuestionsAnswered,
+    required this.examCorrectAnswers,
+    required this.examAccuracy,
+    required this.totalQuestionsAnswered,
+    required this.totalCorrectAnswers,
+    required this.overallAccuracy,
+  });
+}
+
+// Separate Statistics Provider
+final separateStatisticsProvider = FutureProvider<SeparateStatistics>((ref) async {
+  // Get practice statistics from user progress
+  final userProgress = await ref.read(userProgressProvider.future);
+
+  // Get exam results
+  final examResults = await ref.read(examResultsProvider.future);
+
+  // Calculate exam statistics
+  int examQuestionsAnswered = 0;
+  int examCorrectAnswers = 0;
+
+  for (final examResult in examResults) {
+    examQuestionsAnswered += examResult.userAnswers.length;
+    for (int i = 0; i < examResult.userAnswers.length && i < examResult.questions.length; i++) {
+      if (examResult.userAnswers[i] == examResult.questions[i].correctAnswerIndex) {
+        examCorrectAnswers++;
+      }
+    }
+  }
+
+  // Calculate accuracies
+  final practiceAccuracy = userProgress.totalQuestionsAnswered > 0
+      ? (userProgress.correctAnswers / userProgress.totalQuestionsAnswered) * 100
+      : 0.0;
+  final examAccuracy = examQuestionsAnswered > 0
+      ? (examCorrectAnswers / examQuestionsAnswered) * 100
+      : 0.0;
+
+  // Combine practice and exam statistics
+  final totalQuestions = userProgress.totalQuestionsAnswered + examQuestionsAnswered;
+  final totalCorrect = userProgress.correctAnswers + examCorrectAnswers;
+  final overallAccuracy = totalQuestions > 0 ? (totalCorrect / totalQuestions) * 100 : 0.0;
+
+  return SeparateStatistics(
+    practiceQuestionsAnswered: userProgress.totalQuestionsAnswered,
+    practiceCorrectAnswers: userProgress.correctAnswers,
+    practiceAccuracy: practiceAccuracy,
+    examQuestionsAnswered: examQuestionsAnswered,
+    examCorrectAnswers: examCorrectAnswers,
+    examAccuracy: examAccuracy,
+    totalQuestionsAnswered: totalQuestions,
+    totalCorrectAnswers: totalCorrect,
+    overallAccuracy: overallAccuracy,
+  );
+});
+
+// Hierarchical Category Statistics Model
+class HierarchicalCategoryStatistics {
+  final String name;
+  final int totalCorrect;
+  final int totalQuestions;
+  final Map<int, CategoryLevelStats> levels;
+
+  HierarchicalCategoryStatistics({
+    required this.name,
+    required this.totalCorrect,
+    required this.totalQuestions,
+    required this.levels,
+  });
+
+  double get percentage => totalQuestions > 0 ? (totalCorrect / totalQuestions) * 100 : 0;
+}
+
+class CategoryLevelStats {
+  final int level;
+  final int correct;
+  final int total;
+
+  CategoryLevelStats({
+    required this.level,
+    required this.correct,
+    required this.total,
+  });
+
+  double get percentage => total > 0 ? (correct / total) * 100 : 0;
+}
+
+// Hierarchical Statistics Provider (from all exam results)
+final hierarchicalStatisticsProvider = FutureProvider<Map<String, HierarchicalCategoryStatistics>>((ref) async {
+  final examResults = await ref.read(examResultsProvider.future);
+
+  // Initialize hierarchical categories
+  Map<String, Map<int, CategoryLevelStats>> hierarchicalCategories = {
+    '문법': {},
+    '어휘': {},
+  };
+
+  // Process all exam results
+  for (final examResult in examResults) {
+    for (int i = 0; i < examResult.questions.length; i++) {
+      final question = examResult.questions[i];
+      final userAnswer = i < examResult.userAnswers.length ? examResult.userAnswers[i] : -1;
+      final isCorrect = userAnswer == question.correctAnswerIndex;
+
+      // Determine main category (문법 or 어휘)
+      final mainCategory = _determineMainCategory(question);
+      final difficultyLevel = question.difficultyLevel;
+
+      // Initialize level stats if not exists
+      if (!hierarchicalCategories[mainCategory]!.containsKey(difficultyLevel)) {
+        hierarchicalCategories[mainCategory]![difficultyLevel] = CategoryLevelStats(
+          level: difficultyLevel,
+          correct: 0,
+          total: 0,
+        );
+      }
+
+      // Update stats
+      final currentStats = hierarchicalCategories[mainCategory]![difficultyLevel]!;
+      hierarchicalCategories[mainCategory]![difficultyLevel] = CategoryLevelStats(
+        level: difficultyLevel,
+        correct: currentStats.correct + (isCorrect ? 1 : 0),
+        total: currentStats.total + 1,
+      );
+    }
+  }
+
+  // Create final hierarchical category statistics
+  final result = <String, HierarchicalCategoryStatistics>{};
+  for (final mainCategory in hierarchicalCategories.keys) {
+    final levels = hierarchicalCategories[mainCategory]!;
+    final totalCorrect = levels.values.fold(0, (sum, stats) => sum + stats.correct);
+    final totalQuestions = levels.values.fold(0, (sum, stats) => sum + stats.total);
+
+    if (totalQuestions > 0) {
+      result[mainCategory] = HierarchicalCategoryStatistics(
+        name: mainCategory,
+        totalCorrect: totalCorrect,
+        totalQuestions: totalQuestions,
+        levels: levels,
+      );
+    }
+  }
+
+  return result;
+});
+
+// Helper function to determine main category
+String _determineMainCategory(SimpleQuestion question) {
+  final questionType = question.questionType?.toLowerCase() ?? '';
+
+  if (questionType.contains('vocabulary')) {
+    return '어휘';
+  } else if (questionType.contains('grammar')) {
+    return '문법';
+  }
+
+  // Fallback logic
+  final text = question.questionText.toLowerCase();
+  final grammarPoint = question.grammarPoint.toLowerCase();
+
+  if (text.contains('meaning') ||
+      text.contains('synonym') ||
+      text.contains('definition') ||
+      text.contains('word that best') ||
+      grammarPoint.contains('vocabulary')) {
+    return '어휘';
+  }
+
+  return '문법';
+}

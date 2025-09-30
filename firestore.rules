@@ -56,10 +56,9 @@ rules_version = '2';
                data.grammarPoint is string;
       }
 
-      // Helper function to validate anonymous user ID format
+      // Helper function to validate anonymous user ID format (Firebase Auth UID)
       function isValidAnonymousUserId(userId) {
-        return userId is string &&
-               userId.matches('anon_[0-9]+_[0-9]+');
+        return userId is string && userId.size() > 0;
       }
 
       // Exam Questions Collection (allow public read for Flutter app)
@@ -183,10 +182,16 @@ rules_version = '2';
         allow update, delete: if false; // Logs are immutable
       }
 
-      // User specific data (for future expansion)
+      // User specific data - Allow authenticated users to access their own data
       match /users/{userId} {
-        allow read, write: if isAuthenticated() &&
-                              (request.auth.uid == userId || isAdmin());
+        allow read, write: if isAuthenticated() && request.auth.uid == userId;
+        allow read, write: if isAdmin();
+      }
+
+      // User subcollections (progress, sessions, achievements, etc.)
+      match /users/{userId}/{document=**} {
+        allow read, write: if isAuthenticated() && request.auth.uid == userId;
+        allow read, write: if isAdmin();
       }
 
       // Settings collection (admin only)
@@ -204,16 +209,29 @@ rules_version = '2';
       // User Answers Collection - UPDATED for anonymous analytics
       match /userAnswers/{answerId} {
         allow read: if true; // Allow public read for analytics
-        allow create: if (isAuthenticated() && request.auth.uid == resource.data.userId) ||
-                         (isValidAnonymousUserId(resource.data.userId) && isValidUserAnswer(resource.data));
+        allow create: if isAuthenticated() &&
+                         isValidAnonymousUserId(request.resource.data.userId) &&
+                         isValidUserAnswer(request.resource.data);
         allow update, delete: if isAdmin(); // Only admin can modify/delete answers
       }
 
       // Question Analytics Collection - UPDATED for anonymous analytics
       match /questionAnalytics/{questionId} {
-        allow read: if true; // Allow public read for Flutter app to show statistics
-        allow write: if true; // Allow anonymous writes for analytics updates
+        allow read: if isAuthenticated(); // Allow authenticated users to read statistics
+        allow write: if isAuthenticated(); // Allow authenticated users to write analytics
         allow delete: if isAdmin(); // Only admin can delete analytics
+      }
+
+      // Bookmark Analytics Collection - Global bookmark tracking
+      match /bookmarkAnalytics/{questionId} {
+        allow read: if isAuthenticated(); // Anyone can read bookmark counts
+        allow write: if isAuthenticated(); // Allow authenticated users to update counts
+      }
+
+      // Wrong Answer Analytics Collection - Global wrong answer tracking
+      match /wrongAnswerAnalytics/{questionId} {
+        allow read: if isAuthenticated(); // Anyone can read wrong answer counts
+        allow write: if isAuthenticated(); // Allow authenticated users to update counts
       }
 
       // Default deny all other documents

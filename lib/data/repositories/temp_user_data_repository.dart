@@ -8,7 +8,6 @@ import 'package:egg_toeic/data/models/achievement_model.dart';
 import 'package:egg_toeic/data/models/exam_result_model.dart';
 import 'package:egg_toeic/data/repositories/base_repository.dart';
 import 'package:egg_toeic/data/repositories/user_data_repository.dart';
-import 'package:egg_toeic/core/services/anonymous_user_service.dart';
 
 abstract class TempUserDataRepository extends BaseRepository {
   Future<UserProgress> getUserProgress();
@@ -72,9 +71,21 @@ class TempUserDataRepositoryImpl implements UserDataRepository {
   @override
   int getTodaysQuestionCount() {
     try {
-      // Use the same logic as the main repository
-      final totalAnswered = AnonymousUserService.getTotalAnsweredCount();
-      return totalAnswered.clamp(0, 10);
+      // Use the progress data to calculate today's questions
+      final progress = _userProgress;
+      final lastStudy = progress.lastStudyDate;
+      final today = DateTime.now();
+
+      // If last study was today, return total answered count
+      // Otherwise return 0
+      if (lastStudy != null &&
+          lastStudy.year == today.year &&
+          lastStudy.month == today.month &&
+          lastStudy.day == today.day) {
+        return progress.totalQuestionsAnswered.clamp(0, 10);
+      }
+
+      return 0;
     } catch (e) {
       print('Error getting today\'s question count in temp repository: $e');
       return 0;

@@ -93,8 +93,8 @@ class _StatisticsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userProgressAsync = ref.watch(userProgressProvider);
-    final learningSessionsAsync = ref.watch(learningSessionsProvider);
-    final wrongAnswersAsync = ref.watch(wrongAnswersProvider);
+    final separateStatsAsync = ref.watch(separateStatisticsProvider);
+    final hierarchicalStatsAsync = ref.watch(hierarchicalStatisticsProvider);
 
     return userProgressAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -124,20 +124,34 @@ class _StatisticsTab extends ConsumerWidget {
             _buildCharacterCard(context, userProgress),
             const SizedBox(height: AppDimensions.paddingLarge),
 
-            // Key Stats Grid
-            _buildKeyStatsGrid(context, userProgress),
-            const SizedBox(height: AppDimensions.paddingLarge),
+            // Separate Practice and Exam Statistics
+            separateStatsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => const SizedBox.shrink(),
+              data: (separateStats) => Column(
+                children: [
+                  _buildModeStatisticsSection(context, separateStats),
+                  const SizedBox(height: AppDimensions.paddingLarge),
+                ],
+              ),
+            ),
 
-            // Performance Charts Section
-            _buildPerformanceSection(context, userProgress, ref),
-            const SizedBox(height: AppDimensions.paddingLarge),
-
-            // Grammar Points Analysis
-            _buildGrammarPointsSection(context, userProgress),
-            const SizedBox(height: AppDimensions.paddingLarge),
-
-            // Quick Insights
-            _buildInsightsSection(context, userProgress),
+            // Hierarchical Category Statistics (문법/어휘)
+            hierarchicalStatsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => const SizedBox.shrink(),
+              data: (hierarchicalStats) {
+                if (hierarchicalStats.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+                return Column(
+                  children: [
+                    _buildHierarchicalStatisticsSection(
+                        context, hierarchicalStats),
+                  ],
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -185,10 +199,11 @@ class _StatisticsTab extends ConsumerWidget {
                   children: [
                     Text(
                       progress.characterName,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -225,51 +240,107 @@ class _StatisticsTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildKeyStatsGrid(BuildContext context, UserProgress progress) {
+  Widget _buildModeStatisticsSection(
+      BuildContext context, dynamic separateStats) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '주요 통계',
+          '모드별 통계',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
         ),
         const SizedBox(height: AppDimensions.paddingMedium),
-        GridView.count(
-          crossAxisCount: 2,
-          crossAxisSpacing: AppDimensions.paddingMedium,
-          mainAxisSpacing: AppDimensions.paddingMedium,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
+
+        // Total Combined Statistics Card
+        Container(
+          padding: const EdgeInsets.all(AppDimensions.paddingLarge),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.successColor,
+                AppColors.successColor.withOpacity(0.8),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+            boxShadow: AppTheme.cardShadow,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.assessment, color: Colors.white, size: 28),
+                  const SizedBox(width: 8),
+                  Text(
+                    '전체 통계',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppDimensions.paddingMedium),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildTotalStatItem(
+                    context,
+                    '총 문제',
+                    '${separateStats.totalQuestionsAnswered}',
+                    Icons.quiz,
+                  ),
+                  _buildTotalStatItem(
+                    context,
+                    '정답 수',
+                    '${separateStats.totalCorrectAnswers}',
+                    Icons.check_circle,
+                  ),
+                  _buildTotalStatItem(
+                    context,
+                    '정답률',
+                    '${separateStats.overallAccuracy.toStringAsFixed(1)}%',
+                    Icons.my_location,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: AppDimensions.paddingMedium),
+
+        // Practice and Exam Statistics Cards
+        Row(
           children: [
-            _buildStatCard(
-              context,
-              '총 문제 수',
-              '${progress.totalQuestionsAnswered}',
-              Icons.quiz,
-              AppColors.primaryColor,
+            // Practice Statistics
+            Expanded(
+              child: _buildModeStatCard(
+                context,
+                '연습 모드',
+                separateStats.practiceQuestionsAnswered,
+                separateStats.practiceCorrectAnswers,
+                separateStats.practiceAccuracy,
+                AppColors.primaryColor,
+                Icons.school,
+              ),
             ),
-            _buildStatCard(
-              context,
-              '전체 정답률',
-              '${progress.overallAccuracy.toStringAsFixed(1)}%',
-              Icons.my_location,
-              AppColors.successColor,
-            ),
-            _buildStatCard(
-              context,
-              '현재 연속',
-              '${progress.currentStreak}일',
-              Icons.local_fire_department,
-              AppColors.warningColor,
-            ),
-            _buildStatCard(
-              context,
-              '총 학습 시간',
-              '${(progress.totalStudyTimeMinutes / 60).toStringAsFixed(1)}시간',
-              Icons.schedule,
-              AppColors.infoColor,
+            const SizedBox(width: AppDimensions.paddingMedium),
+            // Exam Statistics
+            Expanded(
+              child: _buildModeStatCard(
+                context,
+                '시험 모드',
+                separateStats.examQuestionsAnswered,
+                separateStats.examCorrectAnswers,
+                separateStats.examAccuracy,
+                Colors.orange,
+                Icons.assessment,
+              ),
             ),
           ],
         ),
@@ -277,334 +348,295 @@ class _StatisticsTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatCard(BuildContext context, String title, String value,
-      IconData icon, Color color) {
+  Widget _buildTotalStatItem(
+      BuildContext context, String label, String value, IconData icon) {
+    return Column(
+      children: [
+        Icon(icon, color: Colors.white, size: 32),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Colors.white70,
+              ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildModeStatCard(
+    BuildContext context,
+    String mode,
+    int questionsAnswered,
+    int correctAnswers,
+    double accuracy,
+    Color color,
+    IconData icon,
+  ) {
     return Container(
       padding: const EdgeInsets.all(AppDimensions.paddingMedium),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
-        border: Border.all(color: AppColors.borderColor),
+        border: Border.all(color: color, width: 2),
         boxShadow: AppTheme.cardShadow,
       ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            size: 32,
-            color: color,
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  mode,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: AppDimensions.paddingMedium),
+          _buildModeStatRow(context, '문제 수', '$questionsAnswered', color),
           const SizedBox(height: 8),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-            textAlign: TextAlign.center,
-          ),
+          _buildModeStatRow(context, '정답 수', '$correctAnswers', color),
+          const SizedBox(height: 8),
+          _buildModeStatRow(
+              context, '정답률', '${accuracy.toStringAsFixed(1)}%', color),
         ],
       ),
     );
   }
 
-  Widget _buildPerformanceSection(BuildContext context, UserProgress progress, WidgetRef ref) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '레벨별 성과',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        const SizedBox(height: AppDimensions.paddingMedium),
-        Container(
-          padding: const EdgeInsets.all(AppDimensions.paddingMedium),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
-            border: Border.all(color: AppColors.borderColor),
-            boxShadow: AppTheme.cardShadow,
-          ),
-          child: Column(
-            children: [
-              _buildLevelProgressBar(context, 'Level 1', progress.levelProgress['level1'] ?? 0.0, AppColors.primaryColor),
-              const SizedBox(height: AppDimensions.paddingMedium),
-              _buildLevelProgressBar(context, 'Level 2', progress.levelProgress['level2'] ?? 0.0, AppColors.successColor),
-              const SizedBox(height: AppDimensions.paddingMedium),
-              _buildLevelProgressBar(context, 'Level 3', progress.levelProgress['level3'] ?? 0.0, AppColors.warningColor),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLevelProgressBar(BuildContext context, String level, double progress, Color color) {
+  Widget _buildModeStatRow(
+      BuildContext context, String label, String value, Color color) {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        SizedBox(
-          width: 60,
-          child: Text(
-            level,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
-          ),
-        ),
-        Expanded(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-            child: LinearProgressIndicator(
-              value: progress,
-              backgroundColor: color.withOpacity(0.2),
-              valueColor: AlwaysStoppedAnimation<Color>(color),
-              minHeight: 8,
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
         Text(
-          '${(progress * 100).toStringAsFixed(0)}%',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          label,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: AppColors.textSecondary,
               ),
         ),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+        ),
       ],
     );
   }
 
-  Widget _buildGrammarPointsSection(BuildContext context, UserProgress progress) {
-    final grammarEntries = progress.grammarPointScores.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-
-    final topGrammar = grammarEntries.take(5).toList();
-    final weakGrammar = grammarEntries.reversed.take(3).toList();
-
+  Widget _buildHierarchicalStatisticsSection(
+    BuildContext context,
+    Map<String, dynamic> hierarchicalStats,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '문법 포인트 분석',
+          '시험모드 카테고리별 분석',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
         ),
         const SizedBox(height: AppDimensions.paddingMedium),
-
-        // Strong Areas
-        if (topGrammar.isNotEmpty) ...[
-          Container(
-            padding: const EdgeInsets.all(AppDimensions.paddingMedium),
-            decoration: BoxDecoration(
-              color: AppColors.successColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
-              border: Border.all(color: AppColors.successColor.withOpacity(0.3)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.trending_up,
-                      color: AppColors.successColor,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '강점 영역',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: AppColors.successColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                ...topGrammar.map((entry) => _buildGrammarPointRow(
-                  context, entry.key, entry.value, AppColors.successColor)),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppDimensions.paddingMedium),
-        ],
-
-        // Weak Areas
-        if (weakGrammar.isNotEmpty) ...[
-          Container(
-            padding: const EdgeInsets.all(AppDimensions.paddingMedium),
-            decoration: BoxDecoration(
-              color: AppColors.warningColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
-              border: Border.all(color: AppColors.warningColor.withOpacity(0.3)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.trending_down,
-                      color: AppColors.warningColor,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '개선 필요 영역',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: AppColors.warningColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                ...weakGrammar.map((entry) => _buildGrammarPointRow(
-                  context, entry.key, entry.value, AppColors.warningColor)),
-              ],
-            ),
-          ),
-        ],
+        ...hierarchicalStats.entries.map((entry) =>
+            _buildHierarchicalCategoryCard(context, entry.key, entry.value)),
       ],
     );
   }
 
-  Widget _buildGrammarPointRow(BuildContext context, String grammarPoint, int score, Color color) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              grammarPoint,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-            ),
-            child: Text(
-              '$score점',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w500,
-                  ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildHierarchicalCategoryCard(
+    BuildContext context,
+    String categoryName,
+    dynamic category,
+  ) {
+    final percentage = category.percentage.round();
+    final color = percentage >= 70
+        ? AppColors.successColor
+        : percentage >= 50
+            ? Colors.orange
+            : AppColors.errorColor;
 
-  Widget _buildInsightsSection(BuildContext context, UserProgress progress) {
-    final insights = _generateInsights(progress);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '빠른 인사이트',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        const SizedBox(height: AppDimensions.paddingMedium),
-        ...insights.map((insight) => _buildInsightCard(context, insight)),
-      ],
-    );
-  }
-
-  Widget _buildInsightCard(BuildContext context, Map<String, dynamic> insight) {
     return Container(
       margin: const EdgeInsets.only(bottom: AppDimensions.paddingMedium),
-      padding: const EdgeInsets.all(AppDimensions.paddingMedium),
       decoration: BoxDecoration(
-        color: insight['color'].withOpacity(0.1),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
-        border: Border.all(color: insight['color'].withOpacity(0.3)),
+        boxShadow: AppTheme.cardShadow,
       ),
-      child: Row(
-        children: [
-          Icon(
-            insight['icon'],
-            color: insight['color'],
-            size: 24,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: true,
+          tilePadding: const EdgeInsets.all(AppDimensions.paddingMedium),
+          childrenPadding: const EdgeInsets.fromLTRB(
+            AppDimensions.paddingMedium,
+            0,
+            AppDimensions.paddingMedium,
+            AppDimensions.paddingMedium,
           ),
-          const SizedBox(width: AppDimensions.paddingMedium),
-          Expanded(
-            child: Text(
-              insight['text'],
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
+          title: Row(
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius:
+                      BorderRadius.circular(AppDimensions.radiusSmall),
+                ),
+                child: Icon(
+                  categoryName == '문법' ? Icons.menu_book : Icons.translate,
+                  color: color,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: AppDimensions.paddingMedium),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      categoryName,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${category.totalCorrect}/${category.totalQuestions} 정답 (${percentage}%)',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: color,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          children: [
+            const SizedBox(height: 8),
+            // Overall progress bar
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+              child: LinearProgressIndicator(
+                value: category.totalCorrect / category.totalQuestions,
+                backgroundColor: Colors.grey[200],
+                valueColor: AlwaysStoppedAnimation<Color>(color),
+                minHeight: 10,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: AppDimensions.paddingMedium),
+            // Level breakdown
+            ...category.levels.entries.map((levelEntry) {
+              final level = levelEntry.key;
+              final levelStats = levelEntry.value;
+              final levelPercentage = levelStats.percentage.round();
+              final levelColor = levelPercentage >= 70
+                  ? AppColors.successColor
+                  : levelPercentage >= 50
+                      ? Colors.orange
+                      : AppColors.errorColor;
+
+              return Padding(
+                padding:
+                    const EdgeInsets.only(bottom: AppDimensions.paddingSmall),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: levelColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: levelColor.withOpacity(0.3)),
+                      ),
+                      child: Center(
+                        child: Text(
+                          level.toString(),
+                          style: TextStyle(
+                            color: levelColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppDimensions.paddingMedium),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Level $level',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyLarge
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                              ),
+                              Text(
+                                '${levelStats.correct}/${levelStats.total} (${levelPercentage}%)',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: levelColor,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: levelStats.correct / levelStats.total,
+                              backgroundColor: Colors.grey[200],
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(levelColor),
+                              minHeight: 8,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ],
+        ),
       ),
     );
-  }
-
-  List<Map<String, dynamic>> _generateInsights(UserProgress progress) {
-    final insights = <Map<String, dynamic>>[];
-
-    // Top grammar point
-    if (progress.grammarPointScores.isNotEmpty) {
-      final topGrammar = progress.grammarPointScores.entries
-          .reduce((a, b) => a.value > b.value ? a : b);
-      insights.add({
-        'icon': Icons.star,
-        'color': AppColors.successColor,
-        'text': '가장 강한 영역: ${topGrammar.key} (${topGrammar.value}점)',
-      });
-    }
-
-    // Longest streak
-    if (progress.longestStreak > 0) {
-      insights.add({
-        'icon': Icons.local_fire_department,
-        'color': AppColors.warningColor,
-        'text': '최장 연속 기록: ${progress.longestStreak}일',
-      });
-    }
-
-    // Accuracy insight
-    if (progress.overallAccuracy >= 80) {
-      insights.add({
-        'icon': Icons.my_location,
-        'color': AppColors.successColor,
-        'text': '훌륭한 정답률! ${progress.overallAccuracy.toStringAsFixed(1)}%를 유지하고 있어요',
-      });
-    } else if (progress.overallAccuracy >= 60) {
-      insights.add({
-        'icon': Icons.trending_up,
-        'color': AppColors.primaryColor,
-        'text': '좋은 성과! 80% 목표까지 ${(80 - progress.overallAccuracy).toStringAsFixed(1)}% 남았어요',
-      });
-    }
-
-    // Study progress
-    if (progress.questionsToday != null && progress.questionsToday! > 0) {
-      insights.add({
-        'icon': Icons.today,
-        'color': AppColors.infoColor,
-        'text': '오늘 ${progress.questionsToday}문제 완료! 꾸준히 하고 있어요',
-      });
-    }
-
-    return insights;
   }
 }
 
@@ -635,14 +667,16 @@ class _AchievementsTab extends ConsumerWidget {
       ),
       data: (achievements) => userProgressAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => const Center(child: Text('Error loading progress')),
+        error: (error, stack) =>
+            const Center(child: Text('Error loading progress')),
         data: (userProgress) => SingleChildScrollView(
           padding: const EdgeInsets.all(AppDimensions.paddingMedium),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Recently Unlocked Section
-              _buildRecentlyUnlockedSection(context, achievements, userProgress),
+              _buildRecentlyUnlockedSection(
+                  context, achievements, userProgress),
               const SizedBox(height: AppDimensions.paddingLarge),
 
               // Achievement Categories
@@ -654,7 +688,8 @@ class _AchievementsTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildRecentlyUnlockedSection(BuildContext context, List<Achievement> achievements, UserProgress userProgress) {
+  Widget _buildRecentlyUnlockedSection(BuildContext context,
+      List<Achievement> achievements, UserProgress userProgress) {
     final recentUnlocked = achievements
         .where((a) => a.isUnlocked && a.unlockedAt != null)
         .toList()
@@ -724,12 +759,14 @@ class _AchievementsTab extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: AppDimensions.paddingMedium),
-        ...recent.map((achievement) => _buildRecentAchievementCard(context, achievement)),
+        ...recent.map(
+            (achievement) => _buildRecentAchievementCard(context, achievement)),
       ],
     );
   }
 
-  Widget _buildRecentAchievementCard(BuildContext context, Achievement achievement) {
+  Widget _buildRecentAchievementCard(
+      BuildContext context, Achievement achievement) {
     return Container(
       margin: const EdgeInsets.only(bottom: AppDimensions.paddingMedium),
       padding: const EdgeInsets.all(AppDimensions.paddingMedium),
@@ -788,7 +825,8 @@ class _AchievementsTab extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.amber,
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                  borderRadius:
+                      BorderRadius.circular(AppDimensions.radiusSmall),
                 ),
                 child: Text(
                   '+${achievement.xpReward} XP',
@@ -812,14 +850,16 @@ class _AchievementsTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildAchievementCategories(BuildContext context, List<Achievement> achievements, UserProgress userProgress) {
+  Widget _buildAchievementCategories(BuildContext context,
+      List<Achievement> achievements, UserProgress userProgress) {
     final categories = <String, List<Achievement>>{};
 
     for (final achievement in achievements) {
       categories.putIfAbsent(achievement.category, () => []).add(achievement);
     }
 
-    final updatedAchievements = _updateAchievementProgress(achievements, userProgress);
+    final updatedAchievements =
+        _updateAchievementProgress(achievements, userProgress);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -831,14 +871,18 @@ class _AchievementsTab extends ConsumerWidget {
               ),
         ),
         const SizedBox(height: AppDimensions.paddingMedium),
-        ...categories.entries.map((entry) =>
-          _buildCategorySection(context, entry.key,
-            updatedAchievements.where((a) => a.category == entry.key).toList())),
+        ...categories.entries.map((entry) => _buildCategorySection(
+            context,
+            entry.key,
+            updatedAchievements
+                .where((a) => a.category == entry.key)
+                .toList())),
       ],
     );
   }
 
-  Widget _buildCategorySection(BuildContext context, String category, List<Achievement> achievements) {
+  Widget _buildCategorySection(
+      BuildContext context, String category, List<Achievement> achievements) {
     final categoryColors = {
       'Streak': AppColors.warningColor,
       'Questions': AppColors.primaryColor,
@@ -894,14 +938,15 @@ class _AchievementsTab extends ConsumerWidget {
           ),
           itemCount: achievements.length,
           itemBuilder: (context, index) =>
-            _buildAchievementCard(context, achievements[index], color),
+              _buildAchievementCard(context, achievements[index], color),
         ),
         const SizedBox(height: AppDimensions.paddingLarge),
       ],
     );
   }
 
-  Widget _buildAchievementCard(BuildContext context, Achievement achievement, Color categoryColor) {
+  Widget _buildAchievementCard(
+      BuildContext context, Achievement achievement, Color categoryColor) {
     final isUnlocked = achievement.isUnlocked;
     final progress = achievement.progress;
     final isNearComplete = achievement.isNearCompletion;
@@ -909,14 +954,14 @@ class _AchievementsTab extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(AppDimensions.paddingSmall),
       decoration: BoxDecoration(
-        color: isUnlocked
-          ? categoryColor.withOpacity(0.1)
-          : Colors.white,
+        color: isUnlocked ? categoryColor.withOpacity(0.1) : Colors.white,
         borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
         border: Border.all(
           color: isUnlocked
-            ? categoryColor
-            : (isNearComplete ? categoryColor.withOpacity(0.5) : AppColors.borderColor),
+              ? categoryColor
+              : (isNearComplete
+                  ? categoryColor.withOpacity(0.5)
+                  : AppColors.borderColor),
           width: isUnlocked ? 2 : 1,
         ),
         boxShadow: isUnlocked ? AppTheme.cardShadow : null,
@@ -929,15 +974,17 @@ class _AchievementsTab extends ConsumerWidget {
             height: 50,
             decoration: BoxDecoration(
               color: isUnlocked
-                ? categoryColor
-                : (isNearComplete ? categoryColor.withOpacity(0.3) : AppColors.backgroundLight),
+                  ? categoryColor
+                  : (isNearComplete
+                      ? categoryColor.withOpacity(0.3)
+                      : AppColors.backgroundLight),
               shape: BoxShape.circle,
             ),
             child: Icon(
               isUnlocked ? Icons.emoji_events : Icons.lock,
               color: isUnlocked
-                ? Colors.white
-                : (isNearComplete ? categoryColor : AppColors.textHint),
+                  ? Colors.white
+                  : (isNearComplete ? categoryColor : AppColors.textHint),
               size: 24,
             ),
           ),
@@ -957,11 +1004,14 @@ class _AchievementsTab extends ConsumerWidget {
                       Flexible(
                         child: Text(
                           achievement.title,
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: isUnlocked ? categoryColor : AppColors.textPrimary,
-                                fontSize: 11,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: isUnlocked
+                                        ? categoryColor
+                                        : AppColors.textPrimary,
+                                    fontSize: 11,
+                                  ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -969,10 +1019,11 @@ class _AchievementsTab extends ConsumerWidget {
                       Flexible(
                         child: Text(
                           achievement.description,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppColors.textSecondary,
-                                fontSize: 8,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 8,
+                                  ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -992,17 +1043,24 @@ class _AchievementsTab extends ConsumerWidget {
                       if (achievement.xpReward > 0)
                         Flexible(
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 3, vertical: 1),
                             decoration: BoxDecoration(
                               color: isUnlocked
-                                ? categoryColor.withOpacity(0.2)
-                                : AppColors.backgroundLight,
-                              borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                                  ? categoryColor.withOpacity(0.2)
+                                  : AppColors.backgroundLight,
+                              borderRadius: BorderRadius.circular(
+                                  AppDimensions.radiusSmall),
                             ),
                             child: Text(
                               '+${achievement.xpReward} XP',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: isUnlocked ? categoryColor : AppColors.textSecondary,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: isUnlocked
+                                        ? categoryColor
+                                        : AppColors.textSecondary,
                                     fontWeight: FontWeight.w500,
                                     fontSize: 7,
                                   ),
@@ -1018,11 +1076,14 @@ class _AchievementsTab extends ConsumerWidget {
                             children: [
                               Expanded(
                                 child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                                  borderRadius: BorderRadius.circular(
+                                      AppDimensions.radiusSmall),
                                   child: LinearProgressIndicator(
                                     value: progress,
-                                    backgroundColor: categoryColor.withOpacity(0.2),
-                                    valueColor: AlwaysStoppedAnimation<Color>(categoryColor),
+                                    backgroundColor:
+                                        categoryColor.withOpacity(0.2),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        categoryColor),
                                     minHeight: 1.5,
                                   ),
                                 ),
@@ -1030,7 +1091,10 @@ class _AchievementsTab extends ConsumerWidget {
                               const SizedBox(width: 3),
                               Text(
                                 '${achievement.currentValue}/${achievement.requiredValue}',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
                                       color: AppColors.textSecondary,
                                       fontSize: 7,
                                     ),
@@ -1051,7 +1115,10 @@ class _AchievementsTab extends ConsumerWidget {
                               const SizedBox(width: 3),
                               Text(
                                 '완료',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
                                       color: categoryColor,
                                       fontWeight: FontWeight.w500,
                                       fontSize: 8,
@@ -1072,7 +1139,8 @@ class _AchievementsTab extends ConsumerWidget {
     );
   }
 
-  List<Achievement> _updateAchievementProgress(List<Achievement> achievements, UserProgress userProgress) {
+  List<Achievement> _updateAchievementProgress(
+      List<Achievement> achievements, UserProgress userProgress) {
     return achievements.map((achievement) {
       int currentValue = achievement.currentValue;
       bool isUnlocked = achievement.isUnlocked;
@@ -1090,9 +1158,11 @@ class _AchievementsTab extends ConsumerWidget {
         case AchievementType.accuracy:
           // For accuracy achievements, we'd need more detailed tracking
           // For now, use a simplified approach
-          if (userProgress.overallAccuracy >= 90 && achievement.id == 'perfect_25') {
+          if (userProgress.overallAccuracy >= 90 &&
+              achievement.id == 'perfect_25') {
             currentValue = achievement.requiredValue;
-          } else if (userProgress.overallAccuracy >= 80 && achievement.id == 'perfect_10') {
+          } else if (userProgress.overallAccuracy >= 80 &&
+              achievement.id == 'perfect_10') {
             currentValue = achievement.requiredValue;
           }
           break;
@@ -1109,7 +1179,9 @@ class _AchievementsTab extends ConsumerWidget {
       return achievement.copyWith(
         currentValue: currentValue,
         isUnlocked: isUnlocked,
-        unlockedAt: isUnlocked && achievement.unlockedAt == null ? DateTime.now() : achievement.unlockedAt,
+        unlockedAt: isUnlocked && achievement.unlockedAt == null
+            ? DateTime.now()
+            : achievement.unlockedAt,
       );
     }).toList();
   }

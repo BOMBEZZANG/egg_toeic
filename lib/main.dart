@@ -6,23 +6,56 @@ import 'package:egg_toeic/core/routing/app_router.dart';
 import 'package:egg_toeic/providers/repository_providers.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:egg_toeic/core/services/anonymous_user_service.dart';
+import 'package:egg_toeic/core/services/auth_service.dart';
+import 'package:egg_toeic/core/utils/firebase_diagnostics.dart';
+import 'package:egg_toeic/core/utils/network_test.dart';
 import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  print('🚀 App starting...');
+
   // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  try {
+    print('🔥 Initializing Firebase...');
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    print('✅ Firebase initialized successfully');
+  } catch (e) {
+    print('❌ Firebase initialization failed: $e');
+    print('📱 Stack trace: ${StackTrace.current}');
+  }
 
   // Initialize Hive
+  print('📦 Initializing Hive...');
   await Hive.initFlutter();
+  print('✅ Hive initialized');
 
-  // Initialize Anonymous User Service
-  await AnonymousUserService.initialize();
+  // Run network test first
+  await NetworkTest.checkConnectivity();
 
+  // Run diagnostics to check Firebase setup
+  await FirebaseDiagnostics.runDiagnostics();
+
+  // Initialize Authentication - MUST complete before repositories
+  print('🔐 Initializing Authentication...');
+  try {
+    await AuthService().initialize();
+    print('✅ Authentication initialized in main()');
+
+    // Small delay to ensure auth state is fully propagated
+    await Future.delayed(const Duration(milliseconds: 300));
+    print('✅ Auth state ready in main()');
+  } catch (e, stackTrace) {
+    print('❌ Auth initialization failed in main(): $e');
+    print('📱 Stack trace: $stackTrace');
+    print('⚠️ Continuing with offline mode - data will sync when online');
+    // App should still work offline
+  }
+
+  print('🎨 Launching app UI...');
   runApp(
     const ProviderScope(
       child: EggToeicApp(),

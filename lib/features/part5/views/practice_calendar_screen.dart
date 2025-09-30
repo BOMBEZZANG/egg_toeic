@@ -75,9 +75,18 @@ class _PracticeCalendarScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
-      appBar: AppBar(
+    return PopScope(
+      onPopInvoked: (didPop) {
+        if (didPop) {
+          // Refresh home screen statistics when going back
+          ref.invalidate(userProgressProvider);
+          ref.invalidate(examResultsProvider);
+          ref.invalidate(combinedStatisticsProvider);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.backgroundLight,
+        appBar: AppBar(
         title: const Text('Daily Practice Calendar'),
         backgroundColor: AppColors.primaryColor,
         foregroundColor: Colors.white,
@@ -126,6 +135,7 @@ class _PracticeCalendarScreenState
           // Bottom Action Button
           _buildBottomActionButton(),
         ],
+      ),
       ),
     );
   }

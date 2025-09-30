@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:egg_toeic/core/constants/app_colors.dart';
 import 'package:egg_toeic/core/theme/app_theme.dart';
 import 'package:egg_toeic/providers/repository_providers.dart';
+import 'package:egg_toeic/providers/app_providers.dart';
 import 'package:egg_toeic/data/models/learning_session_model.dart';
 import 'package:egg_toeic/data/models/exam_result_model.dart';
 
@@ -65,8 +66,17 @@ class _ExamLevelSelectionScreenState
   Widget build(BuildContext context) {
     final availableRoundsAsync = ref.watch(availableExamRoundsProvider);
 
-    return Scaffold(
-      appBar: AppBar(
+    return PopScope(
+      onPopInvoked: (didPop) {
+        if (didPop) {
+          // Refresh home screen statistics when going back
+          ref.invalidate(userProgressProvider);
+          ref.invalidate(examResultsProvider);
+          ref.invalidate(combinedStatisticsProvider);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
         title: const Text('시험 모드 - 라운드 선택'),
         backgroundColor: AppColors.primaryColor,
         foregroundColor: Colors.white,
@@ -216,6 +226,7 @@ class _ExamLevelSelectionScreenState
             ],
           ),
         ),
+      ),
       ),
     );
   }

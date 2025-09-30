@@ -1,3 +1,4 @@
+import 'package:egg_toeic/providers/app_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -36,7 +37,7 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -292,7 +293,6 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
           tabs: const [
             Tab(icon: Icon(Icons.assessment), text: '개요'),
             Tab(icon: Icon(Icons.list_alt), text: '문제'),
-            Tab(icon: Icon(Icons.trending_up), text: '분석'),
           ],
         ),
       ),
@@ -314,7 +314,6 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
             children: [
               _buildOverviewTab(results),
               _buildQuestionsTab(results),
-              _buildAnalysisTab(results),
             ],
           ),
         ),
@@ -1003,7 +1002,7 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
                           ),
                           const SizedBox(height: 8),
                           ...List.generate(result.question.options.length, (optionIndex) {
-                            final percentage = analytics.answerPercentages[optionIndex] ?? 0.0;
+                            final percentage = analytics.answerPercentages[optionIndex.toString()] ?? 0.0;
                             final isUserSelected = result.userAnswerIndex == optionIndex;
                             final isCorrectOption = optionIndex == result.question.correctAnswerIndex;
 
@@ -1147,228 +1146,6 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
     );
   }
 
-  Widget _buildAnalysisTab(ExamResults results) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          // Performance analysis
-          _buildPerformanceAnalysis(results),
-          const SizedBox(height: 20),
-
-          // Weak areas
-          _buildWeakAreas(results),
-          const SizedBox(height: 20),
-
-          // Study recommendations
-          _buildStudyRecommendations(results),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPerformanceAnalysis(ExamResults results) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.analytics, color: AppColors.primaryColor),
-                const SizedBox(width: 8),
-                const Text(
-                  '성과 분석',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _getDetailedAnalysis(results),
-              style: const TextStyle(
-                fontSize: 14,
-                height: 1.5,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWeakAreas(ExamResults results) {
-    if (results.weakAreas.isEmpty) {
-      return Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              Icon(Icons.emoji_events, color: AppColors.successColor, size: 48),
-              const SizedBox(height: 16),
-              const Text(
-                '훌륭한 성과! 🎉',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const Text(
-                '특별히 약한 영역이 없습니다. 계속 잘하고 있어요!',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.trending_down, color: AppColors.errorColor),
-                const SizedBox(width: 8),
-                const Text(
-                  '개선이 필요한 영역',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            ...results.weakAreas.map((area) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _buildWeakAreaItem(area),
-                )),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWeakAreaItem(WeakArea area) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.errorColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.errorColor.withOpacity(0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                area.topic,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.errorColor,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${area.errorCount}개 오답',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            area.recommendation,
-            style: TextStyle(
-              color: Colors.grey[700],
-              fontSize: 13,
-              height: 1.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStudyRecommendations(ExamResults results) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.school, color: AppColors.primaryColor),
-                const SizedBox(width: 8),
-                const Text(
-                  '학습 계획',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            ..._getStudyRecommendations(results)
-                .map((recommendation) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            margin: const EdgeInsets.only(top: 6),
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryColor,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              recommendation,
-                              style: const TextStyle(fontSize: 14, height: 1.4),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildBottomActions() {
     return Container(
@@ -1387,7 +1164,18 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
         children: [
           Expanded(
             child: OutlinedButton.icon(
-              onPressed: () => context.pop(),
+              onPressed: () async {
+                // Invalidate providers to refresh home screen statistics
+                ref.invalidate(userProgressProvider);
+                ref.invalidate(examResultsProvider);
+                ref.invalidate(combinedStatisticsProvider);
+                // Give providers time to invalidate before navigating
+                await Future.delayed(const Duration(milliseconds: 50));
+                // Navigate directly to home
+                if (context.mounted) {
+                  context.go('/');
+                }
+              },
               icon: const Icon(Icons.home),
               label: const Text('홈으로'),
               style: OutlinedButton.styleFrom(
@@ -1457,80 +1245,6 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
     return '계속 연습하세요! 💪';
   }
 
-  String _getDetailedAnalysis(ExamResults results) {
-    final percentage = results.percentage;
-    final strongCategories = results.categoryScores
-        .where((cat) => (cat.correct / cat.total) >= 0.8)
-        .map((cat) => cat.category)
-        .toList();
-
-    final weakCategories = results.categoryScores
-        .where((cat) => (cat.correct / cat.total) < 0.6)
-        .map((cat) => cat.category)
-        .toList();
-
-    String analysis = '';
-
-    if (percentage >= 80) {
-      analysis +=
-          'Excellent performance! You demonstrate strong understanding of TOEIC Part 5 concepts. ';
-    } else if (percentage >= 70) {
-      analysis +=
-          'Good performance overall. With focused practice, you can achieve even better results. ';
-    } else if (percentage >= 60) {
-      analysis +=
-          'You\'re on the right track, but there\'s room for improvement. Focus on fundamental concepts. ';
-    } else {
-      analysis +=
-          'Consider reviewing basic grammar and vocabulary concepts before attempting more practice tests. ';
-    }
-
-    if (strongCategories.isNotEmpty) {
-      analysis += 'Your strengths include: ${strongCategories.join(', ')}. ';
-    }
-
-    if (weakCategories.isNotEmpty) {
-      analysis += 'Focus on improving: ${weakCategories.join(', ')}. ';
-    }
-
-    return analysis;
-  }
-
-  List<String> _getStudyRecommendations(ExamResults results) {
-    final recommendations = <String>[];
-    final percentage = results.percentage;
-
-    if (percentage < 60) {
-      recommendations
-          .add('Review basic grammar fundamentals daily for 30 minutes');
-      recommendations.add(
-          'Start with easier practice questions before attempting full exams');
-      recommendations.add(
-          'Focus on understanding question patterns and common mistake types');
-    } else if (percentage < 80) {
-      recommendations
-          .add('Practice specific weak areas identified in the analysis');
-      recommendations
-          .add('Review explanations for incorrect answers carefully');
-      recommendations.add('Take regular practice tests to build confidence');
-    } else {
-      recommendations
-          .add('Continue regular practice to maintain your high performance');
-      recommendations.add('Focus on time management during practice sessions');
-      recommendations
-          .add('Challenge yourself with more difficult question sets');
-    }
-
-    if (results.weakAreas.isNotEmpty) {
-      recommendations.add(
-          'Dedicate extra study time to: ${results.weakAreas.take(2).map((e) => e.topic).join(', ')}');
-    }
-
-    recommendations
-        .add('Review your mistakes regularly using the Wrong Answers section');
-
-    return recommendations;
-  }
 }
 
 // Data classes for exam results

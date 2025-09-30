@@ -4,19 +4,29 @@ import 'package:go_router/go_router.dart';
 import 'package:egg_toeic/core/constants/app_colors.dart';
 import 'package:egg_toeic/core/theme/app_theme.dart';
 import 'package:egg_toeic/core/widgets/custom_app_bar.dart';
+import 'package:egg_toeic/providers/app_providers.dart';
 
 class Part5ModeSelectionScreen extends ConsumerWidget {
   const Part5ModeSelectionScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      appBar: CustomAppBar(
-        title: '파트 5: 모드 선택',
-        backgroundColor: const Color(0xFF58CC02), // Duolingo green
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
+    return PopScope(
+      onPopInvoked: (didPop) {
+        if (didPop) {
+          // Refresh home screen statistics when going back
+          ref.invalidate(userProgressProvider);
+          ref.invalidate(examResultsProvider);
+          ref.invalidate(combinedStatisticsProvider);
+        }
+      },
+      child: Scaffold(
+        appBar: CustomAppBar(
+          title: '파트 5: 모드 선택',
+          backgroundColor: const Color(0xFF58CC02), // Duolingo green
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -66,6 +76,7 @@ class Part5ModeSelectionScreen extends ConsumerWidget {
             ),
           ),
         ),
+      ),
       ),
     );
   }
