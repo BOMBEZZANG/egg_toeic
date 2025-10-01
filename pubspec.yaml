@@ -20,12 +20,12 @@ dependencies:
   shared_preferences: ^2.2.2
   path_provider: ^2.1.1
 
-  # Firebase
-  firebase_core: ^2.24.2
-  cloud_firestore: ^4.14.0
-  firebase_analytics: ^10.7.4
-  firebase_auth: ^4.15.0
-
+# Firebase
+  firebase_core: ^4.1.1   
+  cloud_firestore: ^6.0.2
+  firebase_analytics: ^12.0.2
+  firebase_auth: ^6.1.0
+  
   # Data Models
   freezed_annotation: ^2.4.1
   json_annotation: ^4.8.1
@@ -47,7 +47,7 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   # AdMob
-  google_mobile_ads: ^5.1.0
+  google_mobile_ads: ^6.0.0
 
 dev_dependencies:
   flutter_test:
@@ -65,6 +65,4 @@ flutter:
 
   # Add asset directories for animations and images
   assets:
-    - assets/animations/
-    - assets/images/
     - assets/icons/

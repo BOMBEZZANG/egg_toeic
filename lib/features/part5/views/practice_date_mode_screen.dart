@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:egg_toeic/core/constants/app_colors.dart';
 import 'package:egg_toeic/data/models/simple_models.dart';
 import 'package:egg_toeic/data/models/wrong_answer_model.dart';
+import 'package:egg_toeic/data/models/learning_session_model.dart';
 import 'package:egg_toeic/providers/app_providers.dart';
 import 'package:egg_toeic/providers/repository_providers.dart';
 import 'package:egg_toeic/core/widgets/question_analytics_widget.dart';
@@ -33,11 +34,17 @@ class _PracticeDateModeScreenState extends ConsumerState<PracticeDateModeScreen>
   int? _selectedAnswer;
   bool _showExplanation = false;
   bool _isAnswered = false;
+  
+  // Track session progress
+  int _correctAnswers = 0;
+  late DateTime _sessionStartTime;
+  String? _sessionId;
 
   @override
   void initState() {
     super.initState();
     _initAnimations();
+    _initSession();
   }
 
   void _initAnimations() {
@@ -53,6 +60,12 @@ class _PracticeDateModeScreenState extends ConsumerState<PracticeDateModeScreen>
       parent: _slideController,
       curve: Curves.easeOutCubic,
     ));
+  }
+
+  void _initSession() {
+    _sessionStartTime = DateTime.now();
+    _sessionId = 'practice_${widget.date}_${_sessionStartTime.millisecondsSinceEpoch}';
+    print('🚀 Session started: $_sessionId');
   }
 
   @override
@@ -75,6 +88,11 @@ class _PracticeDateModeScreenState extends ConsumerState<PracticeDateModeScreen>
     final currentQuestion = questions[_currentQuestionIndex];
     final isCorrect = index == currentQuestion.correctAnswerIndex;
 
+    // Track correct answers for session
+    if (isCorrect) {
+      _correctAnswers++;
+    }
+
     userRepository.updateQuestionResult(
       questionId: currentQuestion.id,
       isCorrect: isCorrect,
@@ -89,6 +107,11 @@ class _PracticeDateModeScreenState extends ConsumerState<PracticeDateModeScreen>
     if (!isCorrect) {
       _saveWrongAnswer(currentQuestion, index);
     }
+
+    print('📝 Question ${_currentQuestionIndex + 1}/${questions.length} answered. Correct: $isCorrect (Total correct: $_correctAnswers)');
+
+    // Save progress after each question
+    _saveProgressSession(questions);
 
     // Auto-show explanation after 1 second
     Future.delayed(const Duration(seconds: 1), () {
@@ -217,7 +240,12 @@ class _PracticeDateModeScreenState extends ConsumerState<PracticeDateModeScreen>
     }
   }
 
-  void _completeSession(List<SimpleQuestion> questions) {
+  Future<void> _completeSession(List<SimpleQuestion> questions) async {
+    final endTime = DateTime.now();
+    
+    // Save learning session to track progress
+    await _saveLearningSession(questions, endTime);
+    
     // Navigate to results or back to selection
     context.pop();
 
@@ -227,7 +255,7 @@ class _PracticeDateModeScreenState extends ConsumerState<PracticeDateModeScreen>
       builder: (context) => AlertDialog(
         title: const Text('🎉 세션 완료!'),
         content: Text(
-            '${widget.date} 연습 세션을 완료했습니다!\n총 ${questions.length}문제를 풀었습니다.'),
+            '${widget.date} 연습 세션을 완료했습니다!\n총 ${questions.length}문제를 풀었습니다.\n정답: $_correctAnswers/${questions.length}'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -236,6 +264,71 @@ class _PracticeDateModeScreenState extends ConsumerState<PracticeDateModeScreen>
         ],
       ),
     );
+  }
+  
+  Future<void> _saveLearningSession(List<SimpleQuestion> questions, DateTime endTime) async {
+    try {
+      final userRepository = ref.read(userDataRepositoryProvider);
+      final sessionDate = DateTime.parse(widget.date);
+      
+      final learningSession = LearningSession(
+        id: _sessionId!,
+        sessionType: 'practice',
+        startTime: _sessionStartTime,
+        endTime: endTime,
+        questionsAnswered: questions.length,
+        correctAnswers: _correctAnswers,
+        totalQuestions: questions.length,
+        completionRate: 1.0, // 100% completed
+        averageTimePerQuestion: (endTime.difference(_sessionStartTime).inSeconds / questions.length).round(),
+        sessionDate: sessionDate,
+      );
+      
+      await userRepository.saveLearningSession(learningSession);
+      print('✅ Learning session saved: ${learningSession.id}');
+      print('   - Date: ${sessionDate.toString()}');
+      print('   - Questions: ${questions.length}');
+      print('   - Correct: $_correctAnswers');
+      
+      // Force refresh the practice metadata provider
+      ref.invalidate(practiceSessionMetadataProvider);
+      
+    } catch (e) {
+      print('❌ Error saving learning session: $e');
+    }
+  }
+  
+  Future<void> _saveProgressSession(List<SimpleQuestion> questions) async {
+    try {
+      final userRepository = ref.read(userDataRepositoryProvider);
+      final sessionDate = DateTime.parse(widget.date);
+      final currentTime = DateTime.now();
+      final questionsAnswered = _currentQuestionIndex + 1;
+      
+      final learningSession = LearningSession(
+        id: _sessionId!,
+        sessionType: 'practice',
+        startTime: _sessionStartTime,
+        endTime: currentTime,
+        questionsAnswered: questionsAnswered,
+        correctAnswers: _correctAnswers,
+        totalQuestions: questions.length,
+        completionRate: questionsAnswered / questions.length,
+        averageTimePerQuestion: questionsAnswered > 0 
+            ? (currentTime.difference(_sessionStartTime).inSeconds / questionsAnswered).round() 
+            : 0,
+        sessionDate: sessionDate,
+      );
+      
+      await userRepository.saveLearningSession(learningSession);
+      print('💾 Progress saved: $questionsAnswered/${questions.length} questions, $_correctAnswers correct');
+      
+      // Force refresh the practice metadata provider
+      ref.invalidate(practiceSessionMetadataProvider);
+      
+    } catch (e) {
+      print('❌ Error saving progress session: $e');
+    }
   }
 
   @override
@@ -331,7 +424,7 @@ class _PracticeDateModeScreenState extends ConsumerState<PracticeDateModeScreen>
                       ),
                       const SizedBox(height: 24),
                       Text(
-                        '해당 날짜는 휴무!',
+                        '해당 날짜는 휴식일!',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 24,

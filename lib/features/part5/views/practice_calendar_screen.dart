@@ -141,10 +141,53 @@ class _PracticeCalendarScreenState
   }
 
   Widget _buildStreakCard() {
-    final currentStreak = _calculateCurrentStreak();
-    final longestStreak = _calculateLongestStreak();
-    final totalStudyDays = _practiceData.length;
-
+    return Consumer(
+      builder: (context, ref, child) {
+        final practiceMetadataAsync = ref.watch(practiceSessionMetadataProvider);
+        
+        return practiceMetadataAsync.when(
+          data: (metadata) {
+            // Debug prints
+            print('🔍 Metadata count: ${metadata.length}');
+            for (final meta in metadata) {
+              print('🔍 Date: ${meta.date}, Completed: ${meta.completedQuestions}/${meta.totalQuestions}, Accuracy: ${meta.accuracy}');
+            }
+            
+            // Recalculate _practiceData from fresh metadata
+            final Map<DateTime, PracticeSessionData> freshData = {};
+            for (final meta in metadata) {
+              final dateKey = DateTime(meta.date.year, meta.date.month, meta.date.day);
+              freshData[dateKey] = PracticeSessionData(
+                completedQuestions: meta.completedQuestions,
+                totalQuestions: meta.totalQuestions,
+                correctAnswers: (meta.completedQuestions * meta.accuracy).round(),
+                lastActivity: meta.date,
+              );
+            }
+            
+            print('🔍 Fresh data keys: ${freshData.keys.toList()}');
+            
+            final currentStreak = _calculateCurrentStreakFromData(freshData);
+            final longestStreak = _calculateLongestStreakFromData(freshData);
+            final totalStudyDays = freshData.keys.where((date) {
+              final data = freshData[date];
+              final hasProgress = data != null && (data.isCompleted || data.completedQuestions > 0);
+              print('🔍 Date: $date, Has progress: $hasProgress, Completed: ${data?.completedQuestions}, Is completed: ${data?.isCompleted}');
+              return hasProgress;
+            }).length;
+            
+            print('🔍 Final stats - Current: $currentStreak, Longest: $longestStreak, Total: $totalStudyDays');
+            
+            return _buildStreakCardUI(currentStreak, longestStreak, totalStudyDays);
+          },
+          loading: () => _buildStreakCardUI(0, 0, 0),
+          error: (error, stack) => _buildStreakCardUI(0, 0, 0),
+        );
+      },
+    );
+  }
+  
+  Widget _buildStreakCardUI(int currentStreak, int longestStreak, int totalStudyDays) {
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
@@ -552,7 +595,9 @@ class _PracticeCalendarScreenState
                   ),
                   _buildDetailItem(
                     'Accuracy',
-                    '${((practiceData.correctAnswers / practiceData.completedQuestions) * 100).round()}%',
+                    practiceData.completedQuestions > 0
+                        ? '${((practiceData.correctAnswers / practiceData.completedQuestions) * 100).round()}%'
+                        : '0%',
                     Icons.track_changes,
                   ),
                 ],
@@ -662,12 +707,20 @@ class _PracticeCalendarScreenState
   }
 
   int _calculateCurrentStreak() {
+    return _calculateCurrentStreakFromData(_practiceData);
+  }
+
+  int _calculateLongestStreak() {
+    return _calculateLongestStreakFromData(_practiceData);
+  }
+
+  int _calculateCurrentStreakFromData(Map<DateTime, PracticeSessionData> data) {
     int streak = 0;
     DateTime checkDate = DateTime(_today.year, _today.month, _today.day);
 
     while (true) {
-      final data = _practiceData[checkDate];
-      if (data != null && data.isCompleted) {
+      final practiceData = data[checkDate];
+      if (practiceData != null && (practiceData.isCompleted || (_isSameDay(checkDate, _today) && practiceData.completedQuestions > 0))) {
         streak++;
         checkDate = checkDate.subtract(const Duration(days: 1));
       } else {
@@ -678,17 +731,17 @@ class _PracticeCalendarScreenState
     return streak;
   }
 
-  int _calculateLongestStreak() {
+  int _calculateLongestStreakFromData(Map<DateTime, PracticeSessionData> data) {
     int longestStreak = 0;
     int currentStreak = 0;
 
-    final sortedDates = _practiceData.keys.toList()..sort();
+    final sortedDates = data.keys.toList()..sort();
 
     for (int i = 0; i < sortedDates.length; i++) {
       final date = sortedDates[i];
-      final data = _practiceData[date];
+      final practiceData = data[date];
 
-      if (data != null && data.isCompleted) {
+      if (practiceData != null && (practiceData.isCompleted || (_isSameDay(date, _today) && practiceData.completedQuestions > 0))) {
         currentStreak++;
         longestStreak =
             currentStreak > longestStreak ? currentStreak : longestStreak;
