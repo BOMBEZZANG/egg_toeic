@@ -404,7 +404,7 @@ class _ExamModeScreenState extends ConsumerState<ExamModeScreen> {
     final selectedAnswer = _userAnswers[_currentQuestionIndex];
 
     return Padding(
-      padding: const EdgeInsets.all(20.0),
+      padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -414,82 +414,54 @@ class _ExamModeScreenState extends ConsumerState<ExamModeScreen> {
             backgroundColor: Colors.grey[300],
             valueColor: const AlwaysStoppedAnimation<Color>(Colors.orange),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
 
           // Question text
-          Expanded(
-            flex: 3,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey[300]!),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.orange,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          'Q${_currentQuestionIndex + 1}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.blue[100],
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          'Level ${currentQuestion.difficultyLevel}',
-                          style: TextStyle(
-                            color: Colors.blue[800],
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.orange,
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        currentQuestion.questionText,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500,
-                          height: 1.5,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
+                  child: Text(
+                    'Q${_currentQuestionIndex + 1}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
                     ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  currentQuestion.questionText,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    height: 1.4,
+                  ),
+                  textAlign: TextAlign.left,
+                ),
+              ],
             ),
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
           // Answer options
           Expanded(
-            flex: 4,
             child: ListView.builder(
               itemCount: currentQuestion.options.length,
               itemBuilder: (context, index) {
@@ -498,11 +470,11 @@ class _ExamModeScreenState extends ConsumerState<ExamModeScreen> {
                     String.fromCharCode(65 + index); // A, B, C, D
 
                 return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
+                  margin: const EdgeInsets.only(bottom: 10),
                   child: GestureDetector(
                     onTap: () => _selectAnswer(index),
                     child: Container(
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
                         gradient: isSelected
                             ? AppColors.primaryGradient
@@ -512,7 +484,7 @@ class _ExamModeScreenState extends ConsumerState<ExamModeScreen> {
                                   AppColors.backgroundLight
                                 ],
                               ),
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: isSelected
                               ? AppColors.primaryColor
@@ -532,8 +504,8 @@ class _ExamModeScreenState extends ConsumerState<ExamModeScreen> {
                       child: Row(
                         children: [
                           Container(
-                            width: 40,
-                            height: 40,
+                            width: 32,
+                            height: 32,
                             decoration: BoxDecoration(
                               gradient: isSelected
                                   ? LinearGradient(
@@ -548,7 +520,7 @@ class _ExamModeScreenState extends ConsumerState<ExamModeScreen> {
                                         Colors.grey[300]!
                                       ],
                                     ),
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
                                   color: isSelected
@@ -567,17 +539,17 @@ class _ExamModeScreenState extends ConsumerState<ExamModeScreen> {
                                       ? AppColors.primaryColor
                                       : AppColors.textSecondary,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 16,
+                                  fontSize: 14,
                                 ),
                               ),
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               currentQuestion.options[index],
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: 14,
                                 color: isSelected
                                     ? Colors.white
                                     : AppColors.textPrimary,

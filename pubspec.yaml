@@ -59,10 +59,18 @@ dev_dependencies:
   riverpod_generator: ^2.3.9
   hive_generator: ^2.0.1
   mockito: ^5.4.4
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
 
   # Add asset directories for animations and images
   assets:
-    - assets/icons/
+    - assets/splash_logo.png
+
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/splash_logo.png
+  min_sdk_android: 21

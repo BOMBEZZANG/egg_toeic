@@ -38,6 +38,7 @@ abstract class UserDataRepository extends BaseRepository {
     String? questionId,
     String? wrongAnswerId,
   });
+  Future<void> saveCompletedSession(LearningSession session);
 
   // Favorites
   Future<List<String>> getFavoriteQuestions();
@@ -593,6 +594,19 @@ class UserDataRepositoryImpl implements UserDataRepository {
         correctAnswers: correctAnswers,
       );
     }
+  }
+
+  @override
+  Future<void> saveCompletedSession(LearningSession session) async {
+    // Check if session already exists and update it, otherwise add it
+    final existingIndex = _sessions.indexWhere((s) => s.id == session.id);
+    if (existingIndex != -1) {
+      _sessions[existingIndex] = session;
+    } else {
+      _sessions.add(session);
+    }
+    await _saveSessionsToHive();
+    print('💾 Session saved/updated: ${session.id}. Total sessions: ${_sessions.length}');
   }
 
   @override

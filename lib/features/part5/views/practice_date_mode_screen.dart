@@ -269,8 +269,7 @@ class _PracticeDateModeScreenState extends ConsumerState<PracticeDateModeScreen>
   Future<void> _saveLearningSession(List<SimpleQuestion> questions, DateTime endTime) async {
     try {
       final userRepository = ref.read(userDataRepositoryProvider);
-      final sessionDate = DateTime.parse(widget.date);
-      
+
       final learningSession = LearningSession(
         id: _sessionId!,
         sessionType: 'practice',
@@ -278,21 +277,19 @@ class _PracticeDateModeScreenState extends ConsumerState<PracticeDateModeScreen>
         endTime: endTime,
         questionsAnswered: questions.length,
         correctAnswers: _correctAnswers,
-        totalQuestions: questions.length,
-        completionRate: 1.0, // 100% completed
-        averageTimePerQuestion: (endTime.difference(_sessionStartTime).inSeconds / questions.length).round(),
-        sessionDate: sessionDate,
+        questionIds: questions.map((q) => q.id).toList(),
+        isCompleted: true,
       );
-      
-      await userRepository.saveLearningSession(learningSession);
+
+      await userRepository.saveCompletedSession(learningSession);
       print('✅ Learning session saved: ${learningSession.id}');
-      print('   - Date: ${sessionDate.toString()}');
+      print('   - Date: ${widget.date}');
       print('   - Questions: ${questions.length}');
       print('   - Correct: $_correctAnswers');
-      
+
       // Force refresh the practice metadata provider
       ref.invalidate(practiceSessionMetadataProvider);
-      
+
     } catch (e) {
       print('❌ Error saving learning session: $e');
     }
@@ -301,10 +298,9 @@ class _PracticeDateModeScreenState extends ConsumerState<PracticeDateModeScreen>
   Future<void> _saveProgressSession(List<SimpleQuestion> questions) async {
     try {
       final userRepository = ref.read(userDataRepositoryProvider);
-      final sessionDate = DateTime.parse(widget.date);
       final currentTime = DateTime.now();
       final questionsAnswered = _currentQuestionIndex + 1;
-      
+
       final learningSession = LearningSession(
         id: _sessionId!,
         sessionType: 'practice',
@@ -312,20 +308,16 @@ class _PracticeDateModeScreenState extends ConsumerState<PracticeDateModeScreen>
         endTime: currentTime,
         questionsAnswered: questionsAnswered,
         correctAnswers: _correctAnswers,
-        totalQuestions: questions.length,
-        completionRate: questionsAnswered / questions.length,
-        averageTimePerQuestion: questionsAnswered > 0 
-            ? (currentTime.difference(_sessionStartTime).inSeconds / questionsAnswered).round() 
-            : 0,
-        sessionDate: sessionDate,
+        questionIds: questions.take(questionsAnswered).map((q) => q.id).toList(),
+        isCompleted: false,
       );
-      
-      await userRepository.saveLearningSession(learningSession);
+
+      await userRepository.saveCompletedSession(learningSession);
       print('💾 Progress saved: $questionsAnswered/${questions.length} questions, $_correctAnswers correct');
-      
+
       // Force refresh the practice metadata provider
       ref.invalidate(practiceSessionMetadataProvider);
-      
+
     } catch (e) {
       print('❌ Error saving progress session: $e');
     }

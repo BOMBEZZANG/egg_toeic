@@ -270,6 +270,18 @@ class TempUserDataRepositoryImpl implements UserDataRepository {
   }
 
   @override
+  Future<void> saveCompletedSession(LearningSession session) async {
+    // Check if session already exists and update it, otherwise add it
+    final existingIndex = _sessions.indexWhere((s) => s.id == session.id);
+    if (existingIndex != -1) {
+      _sessions[existingIndex] = session;
+    } else {
+      _sessions.add(session);
+    }
+    print('💾 Session saved/updated: ${session.id}. Total sessions: ${_sessions.length}');
+  }
+
+  @override
   Future<List<String>> getFavoriteQuestions() async {
     return _favorites;
   }

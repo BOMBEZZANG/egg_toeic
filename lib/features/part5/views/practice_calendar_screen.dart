@@ -292,12 +292,32 @@ class _PracticeCalendarScreenState
             onPressed: _previousMonth,
             icon: const Icon(Icons.chevron_left),
           ),
-          Text(
-            _getMonthYearText(_focusedDate),
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppColors.primaryColor,
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    _getMonthYearText(_focusedDate),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primaryColor,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                GestureDetector(
+                  onTap: _showLegendDialog,
+                  child: const Icon(
+                    Icons.help_outline,
+                    size: 18,
+                    color: AppColors.primaryColor,
+                  ),
+                ),
+              ],
             ),
           ),
           IconButton(
@@ -306,6 +326,82 @@ class _PracticeCalendarScreenState
           ),
         ],
       ),
+    );
+  }
+
+  void _showLegendDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        contentPadding: const EdgeInsets.all(24),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildLegendItem(
+              color: Colors.grey[200]!,
+              label: 'No practice',
+            ),
+            const SizedBox(height: 12),
+            _buildLegendItem(
+              color: const Color(0xFF64B5F6),
+              label: '1-9 questions',
+            ),
+            const SizedBox(height: 12),
+            _buildLegendItem(
+              color: const Color(0xFF4CAF50),
+              label: '10 completed',
+              hasIcon: true,
+            ),
+            const SizedBox(height: 12),
+            _buildLegendItem(
+              color: const Color(0xFFFFC107),
+              label: 'Perfect score',
+              hasIcon: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegendItem({
+    required Color color,
+    required String label,
+    bool hasIcon = false,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 20,
+          height: 20,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: hasIcon
+              ? const Icon(Icons.star, color: Colors.white, size: 12)
+              : null,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: Colors.grey[700],
+          ),
+        ),
+      ],
     );
   }
 
@@ -376,30 +472,36 @@ class _PracticeCalendarScreenState
     final isSelected = _isSameDay(date, _selectedDate);
     final isFuture = date.isAfter(_today);
 
-    Color backgroundColor = Colors.white;
+    Color backgroundColor = Colors.grey[200]!; // Default light gray
     Color borderColor = Colors.transparent;
     Color textColor = Colors.black87;
     Widget? statusIcon;
 
     if (isFuture) {
-      // Future dates - grayed out
-      backgroundColor = Colors.grey[100]!;
-      textColor = Colors.grey[400]!;
-    } else if (practiceData != null) {
-      if (practiceData.isCompleted) {
+      // Future dates - grayed out darker
+      backgroundColor = Colors.grey[300]!;
+      textColor = Colors.grey[500]!;
+    } else if (practiceData != null && practiceData.completedQuestions > 0) {
+      // User has answered at least one question
+
+      if (practiceData.completedQuestions >= 10) {
+        // 10 questions completed - show star icon
         if (practiceData.isPerfectScore) {
           // Perfect score - gold background with star
           backgroundColor = const Color(0xFFFFC107);
           textColor = Colors.white;
-          statusIcon = const Icon(Icons.star, color: Colors.white, size: 12);
+          statusIcon = const Icon(Icons.star, color: Colors.white, size: 14);
         } else {
-          // Completed - green background
+          // Completed all questions - green background with star
           backgroundColor = const Color(0xFF4CAF50);
           textColor = Colors.white;
+          statusIcon = const Icon(Icons.star, color: Colors.white, size: 14);
         }
       } else {
-        // In progress - orange background
-        backgroundColor = const Color(0xFFFF9800);
+        // Less than 10 questions - show color based on progress
+        final progressRatio = practiceData.completedQuestions / 10;
+        // In progress - light blue with opacity based on progress
+        backgroundColor = Color(0xFF64B5F6).withOpacity(0.5 + (progressRatio * 0.5));
         textColor = Colors.white;
       }
     }

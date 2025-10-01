@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<gma_ad_services_config>
+    <ads_config>
+        <use_ad_services>false</use_ad_services>
+    </ads_config>
+</gma_ad_services_config>

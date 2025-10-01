@@ -265,6 +265,20 @@ class BookmarksScreen extends ConsumerWidget {
                 _buildFilterChip(
                   context,
                   ref,
+                  'Mode',
+                  ref.watch(bookmarkFiltersProvider).modeType,
+                  ['practice', 'exam'],
+                  ['연습모드', '시험모드'],
+                  (value) {
+                    ref.read(bookmarkFiltersProvider.notifier).state = (value == null || value == '__ALL__')
+                        ? ref.read(bookmarkFiltersProvider).clearModeType()
+                        : ref.read(bookmarkFiltersProvider).copyWith(modeType: value);
+                  },
+                ),
+                const SizedBox(width: 8),
+                _buildFilterChip(
+                  context,
+                  ref,
                   'Level',
                   ref.watch(bookmarkFiltersProvider).level?.toString(),
                   ['1', '2', '3'],
@@ -322,6 +336,8 @@ class BookmarksScreen extends ConsumerWidget {
   ) {
     String getAllText() {
       switch (label) {
+        case 'Mode':
+          return '전체 모드';
         case 'Level':
           return '전체 레벨';
         case 'Category':
@@ -756,17 +772,6 @@ class BookmarksScreen extends ConsumerWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Practice button
-        IconButton(
-          icon: Icon(
-            Icons.quiz,
-            size: 20,
-            color: AppColors.primaryColor,
-          ),
-          onPressed: () => _practiceQuestion(context, question),
-          tooltip: '문제 풀기',
-        ),
-
         // Remove bookmark button
         IconButton(
           icon: Icon(
@@ -801,13 +806,29 @@ class BookmarksScreen extends ConsumerWidget {
       final levelMatch = filters.level == null || bookmark.difficultyLevel == filters.level;
       final categoryMatch = filters.category == null || _inferCategory(bookmark) == filters.category;
       final grammarPointMatch = filters.grammarPoint == null || bookmark.grammarPoint == filters.grammarPoint;
+      final modeMatch = filters.modeType == null || _inferMode(bookmark) == filters.modeType;
 
-      return levelMatch && categoryMatch && grammarPointMatch;
+      return levelMatch && categoryMatch && grammarPointMatch && modeMatch;
     }).toList();
   }
 
-  void _practiceQuestion(BuildContext context, SimpleQuestion question) {
-    context.push('/part5/explanation', extra: question);
+  String _inferMode(SimpleQuestion question) {
+    // Check if question ID starts with EXAM_ or PRAC_ prefix
+    final questionId = question.id.toUpperCase();
+
+    if (questionId.startsWith('EXAM_')) {
+      return 'exam';
+    } else if (questionId.startsWith('PRAC_')) {
+      return 'practice';
+    }
+
+    // Fallback: check for ROUND_ pattern (older exam format)
+    if (questionId.contains('ROUND_')) {
+      return 'exam';
+    }
+
+    // Default to practice mode
+    return 'practice';
   }
 
   void _removeBookmark(WidgetRef ref, String questionId) async {

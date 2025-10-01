@@ -467,9 +467,7 @@ class HomeScreen extends ConsumerWidget {
 
           // Motivational text
           Text(
-            isCompleted
-                ? 'You\'ve completed your daily goal!'
-                : '${dailyGoal - questionsToday} 문제만 더 풀어보자!',
+            isCompleted ? '' : '${dailyGoal - questionsToday} 문제만 더 풀어보자!',
             style: TextStyle(
               color: Colors.white.withOpacity(0.9),
               fontSize: 16,

@@ -832,6 +832,65 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
                   backgroundColor: Colors.grey[200],
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
+                const SizedBox(width: 8),
+                // Bookmark icon
+                Consumer(
+                  builder: (context, ref, child) {
+                    final favoritesAsync = ref.watch(favoritesProvider);
+
+                    return favoritesAsync.when(
+                      data: (favorites) {
+                        final isBookmarked = favorites.contains(result.question.id);
+                        return GestureDetector(
+                          onTap: () => _toggleBookmark(ref, result.question.id),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: isBookmarked
+                                  ? const Color(0xFFFF9600).withOpacity(0.1)
+                                  : Colors.grey[100],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                              color: isBookmarked
+                                  ? const Color(0xFFFF9600)
+                                  : Colors.grey[600],
+                              size: 20,
+                            ),
+                          ),
+                        );
+                      },
+                      loading: () => Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ),
+                      error: (_, __) => Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.bookmark_border,
+                          color: Colors.grey[600],
+                          size: 20,
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -1243,6 +1302,48 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen>
     if (percentage >= 70) return '좋아요! 😊';
     if (percentage >= 60) return '개선의 여지가 있어요 📈';
     return '계속 연습하세요! 💪';
+  }
+
+  void _toggleBookmark(WidgetRef ref, String questionId) async {
+    try {
+      final userDataRepo = ref.read(userDataRepositoryProvider);
+      await userDataRepo.toggleFavorite(questionId);
+
+      // Refresh favorites provider
+      ref.invalidate(favoritesProvider);
+
+      if (mounted) {
+        final isBookmarked = await userDataRepo.isFavorite(questionId);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isBookmarked ? '북마크에 추가되었습니다! 📚' : '북마크에서 제거되었습니다',
+            ),
+            backgroundColor: isBookmarked
+                ? const Color(0xFFFF9600)
+                : Colors.grey[600],
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error toggling bookmark: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('북마크 처리 중 오류가 발생했습니다'),
+            backgroundColor: AppColors.errorColor,
+            duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
 }

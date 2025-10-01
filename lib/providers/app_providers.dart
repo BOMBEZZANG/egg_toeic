@@ -238,12 +238,18 @@ final favoritesProvider = FutureProvider<List<String>>((ref) async {
 final bookmarkedQuestionsProvider = FutureProvider<List<SimpleQuestion>>((ref) async {
   print('🔄 bookmarkedQuestionsProvider: Starting to load bookmarked questions...');
 
-  final userDataRepository = ref.read(userDataRepositoryProvider);
+  // Watch favoritesProvider to automatically refresh when favorites change
+  final favoritesAsync = ref.watch(favoritesProvider);
+
   final questionRepository = ref.read(questionRepositoryProvider);
 
   print('🔄 bookmarkedQuestionsProvider: Got repository instances');
 
-  final favoriteIds = await userDataRepository.getFavoriteQuestions();
+  final favoriteIds = favoritesAsync.when(
+    data: (ids) => ids,
+    loading: () => <String>[],
+    error: (_, __) => <String>[],
+  );
 
   print('📚 bookmarkedQuestionsProvider: Loaded ${favoriteIds.length} favorite IDs');
 
