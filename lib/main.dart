@@ -9,12 +9,27 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:egg_toeic/core/services/auth_service.dart';
 import 'package:egg_toeic/core/utils/firebase_diagnostics.dart';
 import 'package:egg_toeic/core/utils/network_test.dart';
+import 'package:egg_toeic/features/splash/splash_screen.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   print('🚀 App starting...');
+
+  // Initialize Google Mobile Ads
+  print('📱 Initializing Google Mobile Ads...');
+  final initResult = await MobileAds.instance.initialize();
+
+  // Enable test mode for all devices during development
+  final RequestConfiguration requestConfiguration = RequestConfiguration(
+    testDeviceIds: ['YOUR_DEVICE_ID'], // Will be overridden by test ad units
+  );
+  MobileAds.instance.updateRequestConfiguration(requestConfiguration);
+
+  print('✅ Google Mobile Ads initialized');
+  print('📱 Test mode enabled for development');
 
   // Initialize Firebase
   try {
@@ -63,26 +78,50 @@ void main() async {
   );
 }
 
-class EggToeicApp extends ConsumerWidget {
+class EggToeicApp extends ConsumerStatefulWidget {
   const EggToeicApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<EggToeicApp> createState() => _EggToeicAppState();
+}
+
+class _EggToeicAppState extends ConsumerState<EggToeicApp> {
+  bool _showSplash = true;
+
+  void _onSplashComplete() {
+    setState(() {
+      _showSplash = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final initAsync = ref.watch(repositoryInitializerProvider);
-    final router = ref.watch(routerProvider);
 
     return initAsync.when(
-      data: (_) => MaterialApp.router(
-        title: AppStrings.appName,
-        theme: AppTheme.lightTheme,
-        debugShowCheckedModeBanner: false,
-        routerConfig: router,
-      ),
+      data: (_) {
+        if (_showSplash) {
+          return MaterialApp(
+            title: AppStrings.appName,
+            theme: AppTheme.lightTheme,
+            debugShowCheckedModeBanner: false,
+            home: SplashScreen(onComplete: _onSplashComplete),
+          );
+        } else {
+          final router = ref.watch(routerProvider);
+          return MaterialApp.router(
+            title: AppStrings.appName,
+            theme: AppTheme.lightTheme,
+            debugShowCheckedModeBanner: false,
+            routerConfig: router,
+          );
+        }
+      },
       loading: () => MaterialApp(
         title: AppStrings.appName,
         theme: AppTheme.lightTheme,
         debugShowCheckedModeBanner: false,
-        home: const SplashScreen(),
+        home: const LoadingScreen(),
       ),
       error: (error, stack) => MaterialApp(
         title: AppStrings.appName,
@@ -94,225 +133,27 @@ class EggToeicApp extends ConsumerWidget {
   }
 }
 
-class SplashScreen extends StatelessWidget {
-  const SplashScreen({super.key});
+class LoadingScreen extends StatelessWidget {
+  const LoadingScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: AppTheme.backgroundGradient,
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // App logo/icon
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(60),
-                  boxShadow: AppTheme.cardShadow,
-                ),
-                child: const Icon(
-                  Icons.school,
-                  size: 60,
-                  color: Colors.blue,
-                ),
-              ),
-              const SizedBox(height: 32),
-              Text(
-                AppStrings.appName,
-                style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                AppStrings.appTitle,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.white70,
-                    ),
-              ),
-              const SizedBox(height: 48),
-              const CircularProgressIndicator(
-                color: Colors.white,
-                strokeWidth: 3,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Loading...',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Colors.white70,
-                    ),
-              ),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF1CB0F6),
+              Color(0xFF58CC02),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(AppStrings.appName),
-        centerTitle: true,
-      ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppTheme.backgroundGradient,
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Welcome card
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24.0),
-                      child: Column(
-                        children: [
-                          const Icon(
-                            Icons.emoji_events,
-                            size: 48,
-                            color: Colors.amber,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Welcome to ${AppStrings.appName}!',
-                            style: Theme.of(context).textTheme.headlineSmall,
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Practice TOEIC Part 5 with our interactive learning system',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Phase 1 completion message
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.check_circle,
-                            size: 64,
-                            color: Colors.green.shade600,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Phase 1 Complete! 🎉',
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineMedium
-                                ?.copyWith(
-                                  color: Colors.green.shade700,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Foundation architecture is ready',
-                            style: Theme.of(context).textTheme.titleMedium,
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 16),
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Implemented Features:',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleSmall
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                ),
-                                const SizedBox(height: 8),
-                                ...[
-                                  '✅ Data models with Freezed',
-                                  '✅ Repository pattern',
-                                  '✅ Firebase configuration',
-                                  '✅ Local storage with Hive',
-                                  '✅ State management with Riverpod',
-                                  '✅ App theme and constants',
-                                ].map((feature) => Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 2),
-                                      child: Text(
-                                        feature,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium,
-                                      ),
-                                    )),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Next steps
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.rocket_launch,
-                            size: 48,
-                            color: Colors.blue.shade600,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Ready for Phase 2',
-                            style: Theme.of(context).textTheme.titleLarge,
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Now we can implement the UI screens and learning flow!',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+        child: const Center(
+          child: CircularProgressIndicator(
+            color: Colors.white,
+            strokeWidth: 3,
           ),
         ),
       ),

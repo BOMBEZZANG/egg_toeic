@@ -7,6 +7,7 @@ import 'package:egg_toeic/providers/repository_providers.dart';
 import 'package:egg_toeic/providers/app_providers.dart';
 import 'package:egg_toeic/data/models/learning_session_model.dart';
 import 'package:egg_toeic/data/models/exam_result_model.dart';
+import 'package:egg_toeic/core/services/rewarded_ad_manager.dart';
 
 class ExamLevelSelectionScreen extends ConsumerStatefulWidget {
   const ExamLevelSelectionScreen({super.key});
@@ -214,7 +215,7 @@ class _ExamLevelSelectionScreenState
                                     isCompleted: isCompleted,
                                     onTap: () => isCompleted
                                         ? _showCompletedRoundModal(context, round, roundNumber)
-                                        : context.push('/part5/exam/$round'),
+                                        : _showAdConsentModal(context, round),
                                   );
                                 },
                               );
@@ -490,6 +491,209 @@ class _ExamLevelSelectionScreenState
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  // Show ad consent modal before starting exam
+  void _showAdConsentModal(BuildContext context, String round) {
+    // Capture the outer context that has access to GoRouter
+    final navigatorContext = context;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        contentPadding: const EdgeInsets.all(24),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Icon
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.amber.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.play_circle_outline,
+                size: 48,
+                color: Colors.amber[700],
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Title
+            const Text(
+              '시험 시작',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1F2937),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Message
+            Text(
+              '시험을 보기 위해서\n광고를 시청하시겠습니까?',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[700],
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Buttons
+            Row(
+              children: [
+                // 아니오 button
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(dialogContext);
+                      // Navigate to exam directly without ad using captured context
+                      navigatorContext.push('/part5/exam/$round');
+                    },
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      side: BorderSide(color: Colors.grey[400]!),
+                    ),
+                    child: Text(
+                      '아니오',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // 네, 광고시청하기 button
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(dialogContext);
+                      _loadAndShowRewardedAd(navigatorContext, round);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF58CC02),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 2,
+                    ),
+                    child: const Text(
+                      '네, 시청하기',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Load and show rewarded ad, then navigate to exam
+  Future<void> _loadAndShowRewardedAd(BuildContext context, String round) async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => Center(
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryColor),
+                strokeWidth: 3,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '광고 로딩 중...',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey[800],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final adManager = RewardedAdManager();
+      final adLoaded = await adManager.loadAd();
+
+      // Close loading dialog
+      if (context.mounted) {
+        Navigator.pop(context);
+      }
+
+      if (adLoaded) {
+        // Show the ad
+        print('🎁 Showing rewarded ad...');
+        final adShown = await adManager.showAd();
+
+        // Navigate to exam after ad (regardless of whether user watched completely)
+        if (context.mounted) {
+          if (adShown) {
+            print('✅ Rewarded ad completed, navigating to exam');
+          } else {
+            print('⚠️ Rewarded ad was dismissed, navigating to exam anyway');
+          }
+          context.push('/part5/exam/$round');
+        }
+      } else {
+        // Ad failed to load, navigate directly
+        print('⚠️ Rewarded ad failed to load, navigating to exam directly');
+        if (context.mounted) {
+          _showAdFailureSnackBar(context);
+          context.push('/part5/exam/$round');
+        }
+      }
+
+      // Cleanup
+      adManager.dispose();
+    } catch (e) {
+      print('❌ Error loading/showing rewarded ad: $e');
+      // Close loading dialog if still open
+      if (context.mounted) {
+        Navigator.pop(context);
+        _showAdFailureSnackBar(context);
+        context.push('/part5/exam/$round');
+      }
+    }
+  }
+
+  void _showAdFailureSnackBar(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('광고를 불러올 수 없어 바로 시험으로 이동합니다'),
+        backgroundColor: Colors.orange[700],
+        duration: const Duration(seconds: 2),
       ),
     );
   }
