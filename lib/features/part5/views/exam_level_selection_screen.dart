@@ -553,9 +553,8 @@ class _ExamLevelSelectionScreenState
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () {
+                      // Just close the dialog and stay on current page
                       Navigator.pop(dialogContext);
-                      // Navigate to exam directly without ad using captured context
-                      navigatorContext.push('/part5/exam/$round');
                     },
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),

@@ -1,4 +1,4 @@
-package com.example.egg_toeic
+package com.eggsoft.eggtoeic
 
 import io.flutter.embedding.android.FlutterActivity
 

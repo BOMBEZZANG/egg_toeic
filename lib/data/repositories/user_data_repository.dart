@@ -207,7 +207,46 @@ class UserDataRepositoryImpl implements UserDataRepository {
 
   @override
   Future<UserProgress> getUserProgress() async {
+    // Sync from Firebase first (only if local data seems fresh)
+    if (_userProgress.totalQuestionsAnswered == 0) {
+      await _syncProgressFromFirestore();
+    }
     return _userProgress;
+  }
+
+  Future<void> _syncProgressFromFirestore() async {
+    try {
+      final userId = _authService.currentUserId;
+
+      final doc = await _firestore
+          .collection('users')
+          .doc(userId)
+          .get();
+
+      if (doc.exists) {
+        final data = doc.data()!;
+
+        _userProgress = UserProgress(
+          userLevel: data['userLevel'] as int? ?? 1,
+          experiencePoints: data['experiencePoints'] as int? ?? 0,
+          currentStreak: data['currentStreak'] as int? ?? 0,
+          longestStreak: data['longestStreak'] as int? ?? 0,
+          totalQuestionsAnswered: data['totalQuestionsAnswered'] as int? ?? 0,
+          correctAnswers: data['correctAnswers'] as int? ?? 0,
+          lastStudyDate: data['lastStudyDate'] != null
+              ? (data['lastStudyDate'] as Timestamp).toDate()
+              : null,
+        );
+
+        // Save to Hive for offline access
+        await _saveUserProgressToHive();
+
+        print('📥 User progress synced from Firebase');
+      }
+    } catch (e) {
+      print('❌ Error syncing progress from Firebase: $e');
+      // Don't throw - use local data if sync fails
+    }
   }
 
   /// Gets the actual number of questions answered today
@@ -238,6 +277,36 @@ class UserDataRepositoryImpl implements UserDataRepository {
   Future<void> updateUserProgress(UserProgress progress) async {
     _userProgress = progress;
     await _saveUserProgressToHive();
+
+    // Sync to Firebase for persistence across devices/reinstalls
+    await _saveProgressToFirestore(progress);
+  }
+
+  Future<void> _saveProgressToFirestore(UserProgress progress) async {
+    try {
+      final userId = _authService.currentUserId;
+
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .set({
+        'userLevel': progress.userLevel,
+        'experiencePoints': progress.experiencePoints,
+        'currentStreak': progress.currentStreak,
+        'longestStreak': progress.longestStreak,
+        'totalQuestionsAnswered': progress.totalQuestionsAnswered,
+        'correctAnswers': progress.correctAnswers,
+        'lastStudyDate': progress.lastStudyDate != null
+            ? Timestamp.fromDate(progress.lastStudyDate!)
+            : null,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      print('☁️ User progress synced to Firebase');
+    } catch (e) {
+      print('❌ Error saving progress to Firebase: $e');
+      // Don't throw - local save already succeeded
+    }
   }
 
   Future<void> _saveUserProgressToHive() async {
@@ -606,7 +675,41 @@ class UserDataRepositoryImpl implements UserDataRepository {
       _sessions.add(session);
     }
     await _saveSessionsToHive();
+
+    // Sync to Firebase for cross-device support
+    await _saveSessionToFirestore(session);
+
     print('💾 Session saved/updated: ${session.id}. Total sessions: ${_sessions.length}');
+  }
+
+  Future<void> _saveSessionToFirestore(LearningSession session) async {
+    try {
+      final userId = _authService.currentUserId;
+
+      // Save only summary data (metadata)
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('learningSessions')
+          .doc(session.id)
+          .set({
+        'sessionId': session.id,
+        'sessionType': session.sessionType,
+        'startTime': Timestamp.fromDate(session.startTime),
+        'endTime': session.endTime != null
+            ? Timestamp.fromDate(session.endTime!)
+            : null,
+        'questionsAnswered': session.questionsAnswered,
+        'correctAnswers': session.correctAnswers,
+        'isCompleted': session.isCompleted,
+        // Don't save full questionIds array unless needed
+      }, SetOptions(merge: true));
+
+      print('☁️ Session synced to Firebase: ${session.id}');
+    } catch (e) {
+      print('❌ Error saving session to Firebase: $e');
+      // Don't throw - local save already succeeded
+    }
   }
 
   @override
@@ -709,7 +812,77 @@ class UserDataRepositoryImpl implements UserDataRepository {
 
   @override
   Future<List<Achievement>> getAchievements() async {
+    // Sync from Firebase if achievements are still default
+    if (_achievements.isEmpty || _achievements.every((a) => !a.isUnlocked)) {
+      await _syncAchievementsFromFirestore();
+    }
     return _achievements;
+  }
+
+  Future<void> _syncAchievementsFromFirestore() async {
+    try {
+      final userId = _authService.currentUserId;
+
+      final snapshot = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('achievements')
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        print('📥 No achievements found in Firebase, using defaults');
+        return;
+      }
+
+      print('🔄 Syncing ${snapshot.docs.length} achievements from Firebase...');
+
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final achievementId = data['id'] as String;
+
+        // Find the achievement in our local list
+        final index = _achievements.indexWhere((a) => a.id == achievementId);
+
+        if (index != -1) {
+          // Parse achievement type from string
+          AchievementType type;
+          try {
+            type = AchievementType.values.firstWhere(
+              (e) => e.toString() == data['type'],
+              orElse: () => AchievementType.special,
+            );
+          } catch (e) {
+            type = AchievementType.special;
+          }
+
+          // Update the achievement with Firebase data
+          _achievements[index] = Achievement(
+            id: achievementId,
+            title: data['title'] as String,
+            description: data['description'] as String,
+            iconAsset: data['iconAsset'] as String,
+            category: data['category'] as String,
+            type: type,
+            isUnlocked: data['isUnlocked'] as bool? ?? false,
+            unlockedAt: data['unlockedAt'] != null
+                ? (data['unlockedAt'] as Timestamp).toDate()
+                : null,
+            currentValue: data['currentValue'] as int? ?? 0,
+            requiredValue: data['requiredValue'] as int,
+            xpReward: data['xpReward'] as int? ?? 0,
+          );
+
+          print('📥 Synced achievement: $achievementId');
+        }
+      }
+
+      // Save synced achievements to Hive
+      await _saveAchievementsToHive();
+      print('✅ Synced ${snapshot.docs.length} achievements from Firebase');
+    } catch (e) {
+      print('❌ Error syncing achievements from Firebase: $e');
+      // Don't throw - use local/default achievements if sync fails
+    }
   }
 
   @override
@@ -718,6 +891,42 @@ class UserDataRepositoryImpl implements UserDataRepository {
     if (index != -1) {
       _achievements[index] = achievement;
       await _saveAchievementsToHive();
+
+      // Sync to Firebase
+      await _saveAchievementToFirestore(achievement);
+    }
+  }
+
+  Future<void> _saveAchievementToFirestore(Achievement achievement) async {
+    try {
+      final userId = _authService.currentUserId;
+
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('achievements')
+          .doc(achievement.id)
+          .set({
+        'id': achievement.id,
+        'title': achievement.title,
+        'description': achievement.description,
+        'iconAsset': achievement.iconAsset,
+        'category': achievement.category,
+        'type': achievement.type.toString(),
+        'isUnlocked': achievement.isUnlocked,
+        'unlockedAt': achievement.unlockedAt != null
+            ? Timestamp.fromDate(achievement.unlockedAt!)
+            : null,
+        'currentValue': achievement.currentValue,
+        'requiredValue': achievement.requiredValue,
+        'xpReward': achievement.xpReward,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      print('☁️ Achievement synced to Firebase: ${achievement.id}');
+    } catch (e) {
+      print('❌ Error saving achievement to Firebase: $e');
+      // Don't throw - local save already succeeded
     }
   }
 
@@ -807,10 +1016,50 @@ class UserDataRepositoryImpl implements UserDataRepository {
     // Add the new result
     _examResults.add(examResult);
 
-    // Save to Hive
+    // Save to Hive (local)
     await _saveExamResultsToHive();
 
+    // Save to Firebase (cloud sync)
+    await _saveExamResultToFirestore(examResult);
+
     print('💾 Saved exam result for ${examResult.examRound}. Total results: ${_examResults.length}');
+  }
+
+  Future<void> _saveExamResultToFirestore(ExamResult examResult) async {
+    try {
+      final userId = _authService.currentUserId;
+
+      final duration = examResult.examEndTime.difference(examResult.examStartTime);
+      final totalQuestions = examResult.questions.length;
+      final percentage = totalQuestions > 0
+          ? ((examResult.correctAnswers / totalQuestions) * 100).round()
+          : 0;
+
+      // Save only summary data (metadata), not full question details
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('examResults')
+          .doc(examResult.examRound)
+          .set({
+        'id': examResult.id,
+        'examRound': examResult.examRound,
+        'completedAt': FieldValue.serverTimestamp(),
+        'examStartTime': Timestamp.fromDate(examResult.examStartTime),
+        'examEndTime': Timestamp.fromDate(examResult.examEndTime),
+        'totalQuestions': totalQuestions,
+        'correctAnswers': examResult.correctAnswers,
+        'accuracy': examResult.accuracy,
+        'percentage': percentage,
+        'duration': duration.inSeconds,
+        // Don't save full questions array - too much data!
+      }, SetOptions(merge: true));
+
+      print('☁️ Exam result synced to Firebase: ${examResult.examRound}');
+    } catch (e) {
+      print('❌ Error saving exam result to Firebase: $e');
+      // Don't throw - local save already succeeded
+    }
   }
 
   @override
@@ -827,7 +1076,65 @@ class UserDataRepositoryImpl implements UserDataRepository {
 
   @override
   Future<List<ExamResult>> getAllExamResults() async {
+    // Sync from Firebase first
+    await _syncExamResultsFromFirestore();
     return List.from(_examResults);
+  }
+
+  Future<void> _syncExamResultsFromFirestore() async {
+    try {
+      final userId = _authService.currentUserId;
+
+      final snapshot = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('examResults')
+          .get();
+
+      print('🔄 Syncing ${snapshot.docs.length} exam results from Firebase...');
+
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final examRound = data['examRound'] as String;
+
+        // Check if we already have this result locally
+        final existingIndex = _examResults.indexWhere((r) => r.examRound == examRound);
+
+        if (existingIndex == -1) {
+          // We don't have this result locally - it came from another device
+          // Create a minimal ExamResult from Firebase metadata
+          final examStartTime = data['examStartTime'] != null
+              ? (data['examStartTime'] as Timestamp).toDate()
+              : DateTime.now();
+          final examEndTime = data['examEndTime'] != null
+              ? (data['examEndTime'] as Timestamp).toDate()
+              : DateTime.now();
+
+          final examResult = ExamResult(
+            id: data['id'] as String,
+            examRound: examRound,
+            correctAnswers: data['correctAnswers'] as int,
+            accuracy: (data['accuracy'] as num?)?.toDouble() ?? 0.0,
+            questions: [], // Empty - we don't store full questions in Firebase
+            userAnswers: [], // Empty
+            examStartTime: examStartTime,
+            examEndTime: examEndTime,
+          );
+
+          _examResults.add(examResult);
+          print('📥 Loaded exam result from Firebase: $examRound');
+        }
+      }
+
+      // Save synced results to Hive
+      if (snapshot.docs.isNotEmpty) {
+        await _saveExamResultsToHive();
+        print('✅ Synced ${snapshot.docs.length} exam results from Firebase');
+      }
+    } catch (e) {
+      print('❌ Error syncing exam results from Firebase: $e');
+      // Don't throw - use local data if sync fails
+    }
   }
 
   Future<void> _saveExamResultsToHive() async {

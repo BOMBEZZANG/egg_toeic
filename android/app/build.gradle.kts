@@ -9,7 +9,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.egg_toeic"
+    namespace = "com.eggsoft.eggtoeic"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 

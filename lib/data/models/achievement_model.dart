@@ -93,10 +93,11 @@ class Achievement extends Equatable {
 
   Achievement updateProgress(int newValue) {
     final shouldUnlock = newValue >= requiredValue;
+    final DateTime? newUnlockedAt = shouldUnlock && !isUnlocked ? DateTime.now() : unlockedAt;
     return copyWith(
       currentValue: newValue,
       isUnlocked: shouldUnlock,
-      unlockedAt: shouldUnlock && !isUnlocked ? DateTime.now() : unlockedAt,
+      unlockedAt: newUnlockedAt,
     );
   }
 
