@@ -419,10 +419,10 @@ class UserDataRepositoryImpl implements UserDataRepository {
 
   @override
   Future<void> addWrongAnswer(WrongAnswer wrongAnswer) async {
-    // Check for duplicate - prevent adding the same wrong answer twice
-    final exists = _wrongAnswers.any((wa) => wa.id == wrongAnswer.id);
+    // Check for duplicate by questionId - prevent adding the same question twice
+    final exists = _wrongAnswers.any((wa) => wa.questionId == wrongAnswer.questionId);
     if (exists) {
-      print('⚠️  Wrong answer ${wrongAnswer.id} already exists, skipping duplicate');
+      print('⚠️  Question ${wrongAnswer.questionId} already saved as wrong answer, skipping duplicate');
       return;
     }
 
@@ -512,10 +512,10 @@ class UserDataRepositoryImpl implements UserDataRepository {
               .whereType<WrongAnswer>()
               .toList();
 
-          // Merge cloud and local wrong answers (by ID)
-          final localIds = _wrongAnswers.map((wa) => wa.id).toSet();
+          // Merge cloud and local wrong answers (by questionId to prevent duplicates)
+          final localQuestionIds = _wrongAnswers.map((wa) => wa.questionId).toSet();
           final newFromCloud = cloudWrongAnswers
-              .where((wa) => !localIds.contains(wa.id))
+              .where((wa) => !localQuestionIds.contains(wa.questionId))
               .toList();
 
           if (newFromCloud.isNotEmpty) {

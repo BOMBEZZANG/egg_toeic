@@ -186,6 +186,13 @@ class TempUserDataRepositoryImpl implements UserDataRepository {
     print('  - Repository instance: ${hashCode}');
     print('  - Current _wrongAnswers list: ${_wrongAnswers.hashCode}');
 
+    // Check for duplicate by questionId - prevent adding the same question twice
+    final exists = _wrongAnswers.any((wa) => wa.questionId == wrongAnswer.questionId);
+    if (exists) {
+      print('⚠️  Question ${wrongAnswer.questionId} already saved as wrong answer, skipping duplicate');
+      return;
+    }
+
     _wrongAnswers.add(wrongAnswer);
 
     print('💾 Repository ADDED. Total count: ${_wrongAnswers.length}');
