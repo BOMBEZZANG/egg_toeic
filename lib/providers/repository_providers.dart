@@ -45,19 +45,28 @@ final practiceSessionMetadataProvider =
 
     // Get actual learning sessions from user data
     final learningSessions = await userDataRepo.getLearningSessions();
-    
-    // Group user sessions by date for easy lookup
+
+    // Group user sessions by practice date (extracted from session ID, not startTime) for easy lookup
     final sessionsByDate = <DateTime, List<LearningSession>>{};
     for (final session in learningSessions) {
       if (session.sessionType == 'practice') {
-        final dateKey = DateTime(
-          session.startTime.year, 
-          session.startTime.month, 
-          session.startTime.day
-        );
-        sessionsByDate.putIfAbsent(dateKey, () => []).add(session);
+        // Extract date from session ID (format: practice_YYYY-MM-DD_timestamp)
+        final practiceDate = _extractDateFromSessionId(session.id);
+        if (practiceDate != null) {
+          final dateKey = DateTime(
+            practiceDate.year,
+            practiceDate.month,
+            practiceDate.day
+          );
+          sessionsByDate.putIfAbsent(dateKey, () => []).add(session);
+          print('📅 Session ${session.id}: extracted date $dateKey (${session.questionsAnswered} questions, ${session.correctAnswers} correct)');
+        } else {
+          print('⚠️ Could not extract date from session ID: ${session.id}');
+        }
       }
     }
+
+    print('📊 Total sessions grouped by date: ${sessionsByDate.length} dates with practice data');
 
     // Create metadata for ALL available dates from Firebase
     final metadataList = <PracticeSessionMetadata>[];
@@ -185,3 +194,44 @@ final repositoryInitializerProvider = FutureProvider<void>((ref) async {
     questionRepo.initialize(),
   ]);
 });
+
+// Helper function to extract date from session ID
+// Session ID format: "practice_YYYY-MM-DD_timestamp" or "firebase_YYYY-MM-DD_timestamp"
+DateTime? _extractDateFromSessionId(String sessionId) {
+  try {
+    // Split by underscore to get parts
+    final parts = sessionId.split('_');
+    if (parts.length < 2) return null;
+
+    // The date should be the second part (index 1)
+    // For IDs like "practice_2025-10-01_123456" or "firebase_2025_10_01"
+    String datePart = parts[1];
+
+    // Try parsing as YYYY-MM-DD format first
+    if (datePart.contains('-')) {
+      return DateTime.parse(datePart);
+    }
+
+    // Check if it's in format firebase_YYYY_MM_DD
+    if (parts.length >= 4 && parts[1].length == 4) {
+      // Format: firebase_2025_10_01
+      final year = int.parse(parts[1]);
+      final month = int.parse(parts[2]);
+      final day = int.parse(parts[3]);
+      return DateTime(year, month, day);
+    }
+
+    // Try parsing as YYYYMMDD format
+    if (datePart.length == 8) {
+      final year = int.parse(datePart.substring(0, 4));
+      final month = int.parse(datePart.substring(4, 6));
+      final day = int.parse(datePart.substring(6, 8));
+      return DateTime(year, month, day);
+    }
+
+    return null;
+  } catch (e) {
+    print('⚠️ Error extracting date from session ID "$sessionId": $e');
+    return null;
+  }
+}
