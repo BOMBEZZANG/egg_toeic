@@ -77,19 +77,6 @@ class ExamHubScreen extends ConsumerWidget {
 
               const SizedBox(height: 32),
 
-              // Listening Section Header
-              _buildSectionHeader(
-                'Listening Section',
-                Icons.headphones,
-                const Color(0xFFFF6B6B),
-              ),
-              const SizedBox(height: 16),
-
-              // Listening Parts (1-4) - Coming Soon
-              _buildListeningPartsGrid(context),
-
-              const SizedBox(height: 32),
-
               // Reading Section Header
               _buildSectionHeader(
                 'Reading Section',
@@ -133,62 +120,6 @@ class ExamHubScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildListeningPartsGrid(BuildContext context) {
-    final listeningParts = [
-      _PartInfo(
-        partNumber: 1,
-        title: 'Part 1',
-        subtitle: 'Photographs',
-        description: '6 Questions',
-        icon: Icons.photo_camera,
-        color: const Color(0xFFFF6B6B),
-        isAvailable: false,
-      ),
-      _PartInfo(
-        partNumber: 2,
-        title: 'Part 2',
-        subtitle: 'Question-Response',
-        description: '25 Questions',
-        icon: Icons.question_answer,
-        color: const Color(0xFFFF8E53),
-        isAvailable: false,
-      ),
-      _PartInfo(
-        partNumber: 3,
-        title: 'Part 3',
-        subtitle: 'Conversations',
-        description: '39 Questions',
-        icon: Icons.people,
-        color: const Color(0xFFFFA07A),
-        isAvailable: false,
-      ),
-      _PartInfo(
-        partNumber: 4,
-        title: 'Part 4',
-        subtitle: 'Short Talks',
-        description: '30 Questions',
-        icon: Icons.record_voice_over,
-        color: const Color(0xFFFFB347),
-        isAvailable: false,
-      ),
-    ];
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 1.15,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-      ),
-      itemCount: listeningParts.length,
-      itemBuilder: (context, index) {
-        return _buildPartCard(context, listeningParts[index]);
-      },
-    );
-  }
-
   Widget _buildReadingPartsGrid(BuildContext context) {
     final readingParts = [
       _PartInfo(
@@ -210,15 +141,6 @@ class ExamHubScreen extends ConsumerWidget {
         color: const Color(0xFF45B7D1),
         isAvailable: true,
         availableRounds: 5,
-      ),
-      _PartInfo(
-        partNumber: 7,
-        title: 'Part 7',
-        subtitle: 'Reading Comprehension',
-        description: '54 Questions',
-        icon: Icons.description,
-        color: const Color(0xFF96CEB4),
-        isAvailable: false,
       ),
     ];
 

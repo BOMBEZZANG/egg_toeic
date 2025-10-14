@@ -696,10 +696,13 @@ String _determineMainCategory(SimpleQuestion question) {
 
 // Helper function to determine which part a question belongs to
 int? _getPartNumber(String questionId) {
-  if (questionId.contains('PART5') || questionId.contains('Part5')) {
-    return 5;
-  } else if (questionId.contains('PART6') || questionId.contains('Part6')) {
+  // Part 6 questions contain "Part6" in their ID
+  if (questionId.contains('PART6') || questionId.contains('Part6')) {
     return 6;
+  }
+  // Part 5 questions start with "PRAC_" and do NOT contain "Part6"
+  else if (questionId.startsWith('PRAC_') && !questionId.contains('Part6')) {
+    return 5;
   }
   return null;
 }
