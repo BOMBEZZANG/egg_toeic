@@ -1,0 +1,21 @@
+Color Replacements for Home Screen - From Neon to Muted:
+
+Header gradient: 0xFF58CC02, 0xFF89E219 → 0xFF4CAF50, 0xFF66BB6A (softer green)
+Streak badge: 0xFFFF9600 → 0xFFFF8A65 (softer orange)
+Level badge: 0xFF1CB0F6 → 0xFF5C6BC0 (softer indigo)
+XP display: 0xFFFFD900 → 0xFFFFC107 (softer amber)
+Progress bar: 0xFFFFD900 → 0xFFFFC107 (softer amber)
+
+Daily Progress (completed): 0xFF58CC02, 0xFF89E219 → 0xFF4CAF50, 0xFF66BB6A (softer green)
+Daily Progress (in progress): 0xFF1CB0F6, 0xFF42A5F5 → 0xFF5C6BC0, 0xFF7986CB (softer indigo)
+
+Quick Stats:
+- Total questions: 0xFF1CB0F6 → 0xFF5C6BC0 (softer indigo)
+- Accuracy: 0xFF58CC02 → 0xFF4CAF50 (softer green)
+- Streak: 0xFFFF9600 → 0xFFFF8A65 (softer orange)
+
+Practice Hub: 0xFF9C27B0, 0xFFE91E63 → 0xFF7E57C2, 0xFF9575CD (softer purple)
+Exam Hub: 0xFF1976D2, 0xFF42A5F5 → 0xFF42A5F5, 0xFF64B5F6 (softer blue)
+Wrong Answer Hub: 0xFFD32F2F, 0xFFEF5350 → 0xFFE57373, 0xFFEF5350 (softer red)
+Bookmark Hub: 0xFFFF9600, 0xFFFFB74D → 0xFFFFB74D, 0xFFFFCA28 (softer amber)
+Statistics: 0xFF58CC02, 0xFF89E219 → 0xFF26A69A, 0xFF4DB6AC (softer teal)

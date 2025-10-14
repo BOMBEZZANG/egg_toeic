@@ -29,7 +29,9 @@
       "Bash(/mnt/c/flutter/flutter/bin/dart analyze lib/features/statistics/views/statistics_achievements_screen.dart)",
       "Bash(/mnt/c/flutter/flutter/bin/dart analyze lib/data/repositories/user_data_repository.dart)",
       "Bash(/mnt/c/flutter/flutter/bin/flutter analyze lib/data/repositories/user_data_repository.dart)",
-      "Bash(/mnt/c/flutter/flutter/bin/dart analyze lib/providers/repository_providers.dart)"
+      "Bash(/mnt/c/flutter/flutter/bin/dart analyze lib/providers/repository_providers.dart)",
+      "Bash(/mnt/c/flutter/flutter/bin/dart analyze:*)",
+      "Bash(/mnt/c/flutter/flutter/bin/flutter analyze:*)"
     ],
     "deny": [],
     "ask": []

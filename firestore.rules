@@ -1,242 +1,230 @@
-rules_version = '2';
-  service cloud.firestore {
-    match /databases/{database}/documents {
-      // Helper functions for security
-      function isAuthenticated() {
-        return request.auth != null;
-      }
+  rules_version = '2';
+    service cloud.firestore {
+      match /databases/{database}/documents {
+        // Helper functions for security
+        function isAuthenticated() {
+          return request.auth != null;
+        }
 
-      function isAdmin() {
-        return isAuthenticated() &&
-               request.auth.token.email != null &&
-               request.auth.token.email_verified == true;
-      }
+        function isAdmin() {
+          return isAuthenticated() &&
+                 request.auth.token.email != null &&
+                 request.auth.token.email_verified == true;
+        }
 
-      function isValidMetadata(data) {
-        return data.keys().hasAll(['lastUpdated', 'createdAt', 'version']) &&
-               data.lastUpdated is timestamp &&
-               data.createdAt is timestamp &&
-               data.version is string;
-      }
+        function isValidMetadata(data) {
+          return data.keys().hasAll(['lastUpdated', 'createdAt', 'version']) &&
+                 data.lastUpdated is timestamp &&
+                 data.createdAt is timestamp &&
+                 data.version is string;
+        }
 
-      function isValidQuestionData(data) {
-        return data.keys().hasAll([
-                 'questionText', 'options', 'correctAnswerIndex',
-                 'difficultyLevel', 'questionType', 'explanation', 'tags'
-               ]) &&
-               data.options is list &&
-               data.options.size() == 4 &&
-               data.correctAnswerIndex is number &&
-               data.correctAnswerIndex >= 0 &&
-               data.correctAnswerIndex <= 3 &&
-               data.difficultyLevel in [1, 2, 3] &&
-               data.questionType in ['grammar', 'vocabulary'] &&
-               data.tags is list &&
-               data.tags.size() > 0;
-      }
+        function isValidQuestionData(data) {
+          return data.keys().hasAll([
+                   'questionText', 'options', 'correctAnswerIndex',
+                   'difficultyLevel', 'questionType', 'explanation', 'tags'
+                 ]) &&
+                 data.options is list &&
+                 data.options.size() == 4 &&
+                 data.correctAnswerIndex is number &&
+                 data.correctAnswerIndex >= 0 &&
+                 data.correctAnswerIndex <= 3 &&
+                 data.difficultyLevel in [1, 2, 3] &&
+                 data.questionType in ['grammar', 'vocabulary'] &&
+                 data.tags is list &&
+                 data.tags.size() > 0;
+        }
 
-      function isValidUserAnswer(data) {
-        return data.keys().hasAll([
-                 'userId', 'questionId', 'selectedAnswerIndex',
-                 'correctAnswerIndex', 'isCorrect', 'questionMode',
-                 'questionType', 'difficultyLevel', 'grammarPoint'
-               ]) &&
-               data.userId is string &&
-               data.questionId is string &&
-               data.selectedAnswerIndex is number &&
-               data.selectedAnswerIndex >= 0 &&
-               data.selectedAnswerIndex <= 3 &&
-               data.correctAnswerIndex is number &&
-               data.correctAnswerIndex >= 0 &&
-               data.correctAnswerIndex <= 3 &&
-               data.isCorrect is bool &&
-               data.questionMode in ['practice', 'exam'] &&
-               data.questionType in ['grammar', 'vocabulary'] &&
-               data.difficultyLevel in [1, 2, 3] &&
-               data.grammarPoint is string;
-      }
+        function isValidUserAnswer(data) {
+          return data.keys().hasAll([
+                   'userId', 'questionId', 'selectedAnswerIndex',
+                   'correctAnswerIndex', 'isCorrect', 'questionMode',
+                   'questionType', 'difficultyLevel', 'grammarPoint'
+                 ]) &&
+                 data.userId is string &&
+                 data.questionId is string &&
+                 data.selectedAnswerIndex is number &&
+                 data.selectedAnswerIndex >= 0 &&
+                 data.selectedAnswerIndex <= 3 &&
+                 data.correctAnswerIndex is number &&
+                 data.correctAnswerIndex >= 0 &&
+                 data.correctAnswerIndex <= 3 &&
+                 data.isCorrect is bool &&
+                 data.questionMode in ['practice', 'exam'] &&
+                 data.questionType in ['grammar', 'vocabulary'] &&
+                 data.difficultyLevel in [1, 2, 3] &&
+                 data.grammarPoint is string;
+        }
 
-      // Helper function to validate anonymous user ID format (Firebase Auth UID)
-      function isValidAnonymousUserId(userId) {
-        return userId is string && userId.size() > 0;
-      }
+        // Helper function to validate anonymous user ID format
+        function isValidAnonymousUserId(userId) {
+          return userId is string &&
+                 userId.matches('anon_[0-9]+_[0-9]+');
+        }
 
-      // Exam Questions Collection (allow public read for Flutter app)
-      match /examQuestions/{questionId} {
-        allow read: if true; // Allow public read for Flutter app
-        allow write: if isAdmin() &&
-                        isValidQuestionData(resource.data) &&
-                        resource.data.mode == 'exam';
-      }
+        // Exam Questions Collection (allow public read for Flutter app)
+        match /examQuestions/{questionId} {
+          allow read: if true; // Allow public read for Flutter app
+          allow write: if isAdmin() &&
+                          isValidQuestionData(resource.data) &&
+                          resource.data.mode == 'exam';
+        }
 
-      // Practice Questions Collection (allow public read for Flutter app)
-      match /practiceQuestions/{questionId} {
-        allow read: if true; // Allow public read for Flutter app
-        allow write: if isAdmin() &&
-                        isValidQuestionData(resource.data) &&
-                        resource.data.mode == 'practice';
-      }
+        // Practice Questions Collection (allow public read for Flutter app)
+        match /practiceQuestions/{questionId} {
+          allow read: if true; // Allow public read for Flutter app
+          allow write: if isAdmin() &&
+                          isValidQuestionData(resource.data) &&
+                          resource.data.mode == 'practice';
+        }
 
-      // Exam Sets Collection
-      match /examSets/{setId} {
-        allow read: if isAuthenticated();
-        allow write: if isAdmin();
-      }
+        // Part 6 Exam Questions Collection (allow public read for Flutter app)
+        match /part6examQuestions/{questionId} {
+          allow read: if true; // Allow public read for Flutter app
+          allow write: if isAdmin();
+        }
 
-      // Daily Sets Collection
-      match /dailySets/{setId} {
-        allow read: if isAuthenticated();
-        allow write: if isAdmin();
-      }
+        // Exam Sets Collection
+        match /examSets/{setId} {
+          allow read: if isAuthenticated();
+          allow write: if isAdmin();
+        }
 
-      // METADATA COLLECTIONS
+        // Daily Sets Collection
+        match /dailySets/{setId} {
+          allow read: if isAuthenticated();
+          allow write: if isAdmin();
+        }
 
-      // Practice Metadata - Summary (allow public read for Flutter app)
-      match /metadata/practice {
-        allow read: if true; // Allow public read for Flutter app
-        allow write: if isAdmin() && isValidMetadata(resource.data);
-      }
+        // METADATA COLLECTIONS
 
-      // Practice Metadata - Daily dates (corrected path structure)
-      match /metadata/practice/daily/{date} {
-        allow read: if true; // Allow public read for Flutter app
-        allow write: if isAdmin() &&
-                        isValidMetadata(resource.data) &&
-                        resource.data.keys().hasAll([
-                          'date', 'totalQuestions', 'questionIds',
-                          'levelDistribution', 'preview'
-                        ]) &&
-                        resource.data.date is string &&
-                        resource.data.totalQuestions is number &&
-                        resource.data.questionIds is list &&
-                        resource.data.levelDistribution is map &&
-                        resource.data.preview is map;
-      }
+        // Practice Metadata - Summary (allow public read for Flutter app)
+        match /metadata/practice {
+          allow read: if true; // Allow public read for Flutter app
+          allow write: if isAdmin() && isValidMetadata(resource.data);
+        }
 
-      // Exam Metadata - Summary (allow public read for Flutter app)
-      match /metadata/exam {
-        allow read: if true; // Allow public read for Flutter app
-        allow write: if isAdmin() && isValidMetadata(resource.data);
-      }
+        // Practice Metadata - Daily dates (corrected path structure)
+        match /metadata/practice/daily/{date} {
+          allow read: if true; // Allow public read for Flutter app
+          allow write: if isAdmin() &&
+                          isValidMetadata(resource.data) &&
+                          resource.data.keys().hasAll([
+                            'date', 'totalQuestions', 'questionIds',
+                            'levelDistribution', 'preview'
+                          ]) &&
+                          resource.data.date is string &&
+                          resource.data.totalQuestions is number &&
+                          resource.data.questionIds is list &&
+                          resource.data.levelDistribution is map &&
+                          resource.data.preview is map;
+        }
 
-      // Exam Metadata - Rounds (allow public read for Flutter app)
-      match /metadata/exam/rounds/{roundId} {
-        allow read: if true; // Allow public read for Flutter app
-        allow write: if isAdmin() &&
-                        isValidMetadata(resource.data) &&
-                        resource.data.keys().hasAll([
-                          'roundId', 'roundNumber', 'totalQuestions',
-                          'sections', 'questionIds', 'examInfo'
-                        ]) &&
-                        resource.data.roundId is string &&
-                        resource.data.roundNumber is number &&
-                        resource.data.totalQuestions is number &&
-                        resource.data.sections is map &&
-                        resource.data.questionIds is list &&
-                        resource.data.examInfo is map;
-      }
+        // Exam Metadata - Summary (allow public read for Flutter app)
+        match /metadata/exam {
+          allow read: if true; // Allow public read for Flutter app
+          allow write: if isAdmin() && isValidMetadata(resource.data);
+        }
 
-      // Batch Operations Metadata
-      match /metadata/batchOperations/{batchId} {
-        allow read: if isAuthenticated();
-        allow write: if isAdmin() &&
-                        resource.data.keys().hasAll([
-                          'id', 'type', 'status', 'totalItems',
-                          'processedItems', 'failedItems', 'errors',
-                          'startedAt', 'metadata'
-                        ]) &&
-                        resource.data.type in ['practice', 'exam'] &&
-                        resource.data.status in ['pending', 'processing', 'completed', 'failed', 'partial'];
-      }
+        // Exam Metadata - Rounds (allow public read for Flutter app)
+        match /metadata/exam/rounds/{roundId} {
+          allow read: if true; // Allow public read for Flutter app
+          allow write: if isAdmin() &&
+                          isValidMetadata(resource.data) &&
+                          resource.data.keys().hasAll([
+                            'roundId', 'roundNumber', 'totalQuestions',
+                            'sections', 'questionIds', 'examInfo'
+                          ]) &&
+                          resource.data.roundId is string &&
+                          resource.data.roundNumber is number &&
+                          resource.data.totalQuestions is number &&
+                          resource.data.sections is map &&
+                          resource.data.questionIds is list &&
+                          resource.data.examInfo is map;
+        }
 
-      // Analytics Cache Metadata
-      match /metadata/analytics/{docId} {
-        allow read: if isAuthenticated();
-        allow write: if isAdmin();
-      }
+        // Batch Operations Metadata
+        match /metadata/batchOperations/{batchId} {
+          allow read: if isAuthenticated();
+          allow write: if isAdmin() &&
+                          resource.data.keys().hasAll([
+                            'id', 'type', 'status', 'totalItems',
+                            'processedItems', 'failedItems', 'errors',
+                            'startedAt', 'metadata'
+                          ]) &&
+                          resource.data.type in ['practice', 'exam'] &&
+                          resource.data.status in ['pending', 'processing', 'completed', 'failed', 'partial'];
+        }
 
-      // Question History Collection
-      match /questionHistory/{historyId} {
-        allow read: if isAuthenticated();
-        allow write: if isAdmin();
-      }
+        // Analytics Cache Metadata
+        match /metadata/analytics/{docId} {
+          allow read: if isAuthenticated();
+          allow write: if isAdmin();
+        }
 
-      // Review Comments Collection
-      match /reviewComments/{commentId} {
-        allow read: if isAuthenticated();
-        allow write: if isAdmin();
-      }
+        // Question History Collection
+        match /questionHistory/{historyId} {
+          allow read: if isAuthenticated();
+          allow write: if isAdmin();
+        }
 
-      // Tags Collection
-      match /tags/{tagId} {
-        allow read: if isAuthenticated();
-        allow write: if isAdmin() &&
-                        resource.data.keys().hasAll(['name', 'category', 'usageCount']) &&
-                        resource.data.category in ['grammar', 'topic', 'difficulty', 'custom'];
-      }
+        // Review Comments Collection
+        match /reviewComments/{commentId} {
+          allow read: if isAuthenticated();
+          allow write: if isAdmin();
+        }
 
-      // Admin Logs Collection
-      match /adminLogs/{logId} {
-        allow read: if isAdmin();
-        allow create: if isAdmin();
-        allow update, delete: if false; // Logs are immutable
-      }
+        // Tags Collection
+        match /tags/{tagId} {
+          allow read: if isAuthenticated();
+          allow write: if isAdmin() &&
+                          resource.data.keys().hasAll(['name', 'category', 'usageCount']) &&
+                          resource.data.category in ['grammar', 'topic', 'difficulty', 'custom'];
+        }
 
-      // User specific data - Allow authenticated users to access their own data
-      match /users/{userId} {
-        allow read, write: if isAuthenticated() && request.auth.uid == userId;
-        allow read, write: if isAdmin();
-      }
+        // Admin Logs Collection
+        match /adminLogs/{logId} {
+          allow read: if isAdmin();
+          allow create: if isAdmin();
+          allow update, delete: if false; // Logs are immutable
+        }
 
-      // User subcollections (progress, sessions, achievements, etc.)
-      match /users/{userId}/{document=**} {
-        allow read, write: if isAuthenticated() && request.auth.uid == userId;
-        allow read, write: if isAdmin();
-      }
+        // User specific data (for future expansion)
+        match /users/{userId} {
+          allow read, write: if isAuthenticated() &&
+                                (request.auth.uid == userId || isAdmin());
+        }
 
-      // Settings collection (admin only)
-      match /settings/{settingId} {
-        allow read: if isAuthenticated();
-        allow write: if isAdmin();
-      }
+        // Settings collection (admin only)
+        match /settings/{settingId} {
+          allow read: if isAuthenticated();
+          allow write: if isAdmin();
+        }
 
-      // Performance metrics (admin only write, auth read)
-      match /metrics/{metricId} {
-        allow read: if isAuthenticated();
-        allow write: if isAdmin();
-      }
+        // Performance metrics (admin only write, auth read)
+        match /metrics/{metricId} {
+          allow read: if isAuthenticated();
+          allow write: if isAdmin();
+        }
 
-      // User Answers Collection - UPDATED for anonymous analytics
-      match /userAnswers/{answerId} {
-        allow read: if true; // Allow public read for analytics
-        allow create: if isAuthenticated() &&
-                         isValidAnonymousUserId(request.resource.data.userId) &&
-                         isValidUserAnswer(request.resource.data);
-        allow update, delete: if isAdmin(); // Only admin can modify/delete answers
-      }
+        // User Answers Collection - UPDATED for anonymous analytics
+        match /userAnswers/{answerId} {
+          allow read: if true; // Allow public read for analytics
+          allow create: if (isAuthenticated() && request.auth.uid == resource.data.userId) ||
+                           (isValidAnonymousUserId(resource.data.userId) && isValidUserAnswer(resource.data));
+          allow update, delete: if isAdmin(); // Only admin can modify/delete answers
+        }
 
-      // Question Analytics Collection - UPDATED for anonymous analytics
-      match /questionAnalytics/{questionId} {
-        allow read: if isAuthenticated(); // Allow authenticated users to read statistics
-        allow write: if isAuthenticated(); // Allow authenticated users to write analytics
-        allow delete: if isAdmin(); // Only admin can delete analytics
-      }
+        // Question Analytics Collection - UPDATED for anonymous analytics
+        match /questionAnalytics/{questionId} {
+          allow read: if true; // Allow public read for Flutter app to show statistics
+          allow write: if true; // Allow anonymous writes for analytics updates
+          allow delete: if isAdmin(); // Only admin can delete analytics
+        }
 
-      // Bookmark Analytics Collection - Global bookmark tracking
-      match /bookmarkAnalytics/{questionId} {
-        allow read: if isAuthenticated(); // Anyone can read bookmark counts
-        allow write: if isAuthenticated(); // Allow authenticated users to update counts
-      }
-
-      // Wrong Answer Analytics Collection - Global wrong answer tracking
-      match /wrongAnswerAnalytics/{questionId} {
-        allow read: if isAuthenticated(); // Anyone can read wrong answer counts
-        allow write: if isAuthenticated(); // Allow authenticated users to update counts
-      }
-
-      // Default deny all other documents
-      match /{document=**} {
-        allow read, write: if false;
+        // Default deny all other documents
+        match /{document=**} {
+          allow read, write: if false;
+        }
       }
     }
-  }

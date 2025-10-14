@@ -241,12 +241,26 @@ class _ExamModeScreenState extends ConsumerState<ExamModeScreen> {
   Future<void> _saveWrongAnswers() async {
     final userDataRepo = ref.read(userDataRepositoryProvider);
 
+    // Get existing wrong answers to check for duplicates
+    final existingWrongAnswers = await userDataRepo.getWrongAnswers();
+    final existingQuestionIds = existingWrongAnswers.map((wa) => wa.questionId).toSet();
+
+    int newWrongAnswers = 0;
+    int skippedDuplicates = 0;
+
     for (int i = 0; i < _questions.length; i++) {
       final userAnswer = _userAnswers[i];
       final correctAnswer = _questions[i].correctAnswerIndex;
 
       if (userAnswer != -1 && userAnswer != correctAnswer) {
         final question = _questions[i];
+
+        // Check if this question is already in wrong answers
+        if (existingQuestionIds.contains(question.id)) {
+          print('⏭️ Skipping duplicate wrong answer for question: ${question.id}');
+          skippedDuplicates++;
+          continue; // Skip this question - already in wrong answers
+        }
 
         // Determine category based on grammar pattern analysis
         String category = 'grammar';
@@ -282,8 +296,12 @@ class _ExamModeScreenState extends ConsumerState<ExamModeScreen> {
         );
 
         await userDataRepo.addWrongAnswer(wrongAnswer);
+        newWrongAnswers++;
+        print('✅ Added new wrong answer for question: ${question.id}');
       }
     }
+
+    print('📊 Wrong answers saved: $newWrongAnswers new, $skippedDuplicates duplicates skipped');
   }
 
   String _determineGrammarPoint(String questionText) {

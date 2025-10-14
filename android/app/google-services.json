@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1093298457435:android:5d89886038353650bc687e",
+        "mobilesdk_app_id": "1:1093298457435:android:88742d9ea6a63335bc687e",
         "android_client_info": {
-          "package_name": "com.example.egg_toeic"
+          "package_name": "com.eggsoft.eggtoeic"
         }
       },
       "oauth_client": [],

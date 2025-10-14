@@ -89,12 +89,30 @@ class _StatisticsAchievementsScreenState
   }
 }
 
-class _StatisticsTab extends ConsumerWidget {
+class _StatisticsTab extends ConsumerStatefulWidget {
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_StatisticsTab> createState() => _StatisticsTabState();
+}
+
+class _StatisticsTabState extends ConsumerState<_StatisticsTab> {
+  String _selectedFilter = 'all'; // 'all', 'part5', 'part6'
+
+  @override
+  Widget build(BuildContext context) {
     final userProgressAsync = ref.watch(userProgressProvider);
-    final separateStatsAsync = ref.watch(separateStatisticsProvider);
-    final hierarchicalStatsAsync = ref.watch(hierarchicalStatisticsProvider);
+
+    // Watch appropriate statistics based on filter
+    final separateStatsAsync = _selectedFilter == 'all'
+        ? ref.watch(separateStatisticsProvider)
+        : _selectedFilter == 'part5'
+            ? ref.watch(partStatisticsProvider(5))
+            : ref.watch(partStatisticsProvider(6));
+
+    final hierarchicalStatsAsync = _selectedFilter == 'all'
+        ? ref.watch(hierarchicalStatisticsProvider)
+        : _selectedFilter == 'part5'
+            ? ref.watch(partHierarchicalStatisticsProvider(5))
+            : ref.watch(partHierarchicalStatisticsProvider(6));
 
     return userProgressAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -124,13 +142,31 @@ class _StatisticsTab extends ConsumerWidget {
             _buildCharacterCard(context, userProgress),
             const SizedBox(height: AppDimensions.paddingLarge),
 
+            // Filter Dropdown
+            _buildFilterDropdown(context),
+            const SizedBox(height: AppDimensions.paddingLarge),
+
+            // Show Part Header if specific part is selected
+            if (_selectedFilter != 'all') ...[
+              _buildPartHeaderCard(context, _selectedFilter == 'part5' ? 5 : 6),
+              const SizedBox(height: AppDimensions.paddingLarge),
+            ],
+
             // Separate Practice and Exam Statistics
             separateStatsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, stack) => const SizedBox.shrink(),
               data: (separateStats) => Column(
                 children: [
-                  _buildModeStatisticsSection(context, separateStats),
+                  _buildModeStatisticsSection(
+                    context,
+                    separateStats,
+                    _selectedFilter == 'part5'
+                        ? 5
+                        : _selectedFilter == 'part6'
+                            ? 6
+                            : null,
+                  ),
                   const SizedBox(height: AppDimensions.paddingLarge),
                 ],
               ),
@@ -154,6 +190,176 @@ class _StatisticsTab extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildFilterDropdown(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+        border: Border.all(color: AppColors.primaryColor.withOpacity(0.3)),
+        boxShadow: AppTheme.cardShadow,
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.filter_list,
+            color: AppColors.primaryColor,
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Text(
+            '구분:',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _selectedFilter,
+                isExpanded: true,
+                icon: Icon(
+                  Icons.arrow_drop_down,
+                  color: AppColors.primaryColor,
+                ),
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: AppColors.primaryColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'all',
+                    child: Row(
+                      children: [
+                        Icon(Icons.assessment,
+                            size: 18, color: AppColors.primaryColor),
+                        SizedBox(width: 8),
+                        Text('전체 통계'),
+                      ],
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'part5',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_note,
+                            size: 18, color: Color(0xFF4ECDC4)),
+                        SizedBox(width: 8),
+                        Text('Part 5 통계'),
+                      ],
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'part6',
+                    child: Row(
+                      children: [
+                        Icon(Icons.article, size: 18, color: Color(0xFF45B7D1)),
+                        SizedBox(width: 8),
+                        Text('Part 6 통계'),
+                      ],
+                    ),
+                  ),
+                ],
+                onChanged: (String? newValue) {
+                  if (newValue != null) {
+                    setState(() {
+                      _selectedFilter = newValue;
+                    });
+                  }
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPartHeaderCard(BuildContext context, int partNumber) {
+    final partInfo = {
+      5: {
+        'title': 'Part 5',
+        'subtitle': 'Incomplete Sentences',
+        'description': '문법 & 어휘',
+        'icon': Icons.edit_note,
+        'color': const Color(0xFF4ECDC4),
+      },
+      6: {
+        'title': 'Part 6',
+        'subtitle': 'Text Completion',
+        'description': '지문 완성',
+        'icon': Icons.article,
+        'color': const Color(0xFF45B7D1),
+      },
+    };
+
+    final info = partInfo[partNumber]!;
+
+    return Container(
+      padding: const EdgeInsets.all(AppDimensions.paddingLarge),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            info['color'] as Color,
+            (info['color'] as Color).withOpacity(0.7),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+        boxShadow: AppTheme.cardShadow,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: Icon(
+              info['icon'] as IconData,
+              color: Colors.white,
+              size: 32,
+            ),
+          ),
+          const SizedBox(width: AppDimensions.paddingLarge),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  info['title'] as String,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  info['subtitle'] as String,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: Colors.white70,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  info['description'] as String,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.white70,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -241,12 +447,15 @@ class _StatisticsTab extends ConsumerWidget {
   }
 
   Widget _buildModeStatisticsSection(
-      BuildContext context, dynamic separateStats) {
+      BuildContext context, dynamic separateStats, int? partNumber) {
+    final title = partNumber != null ? 'Part $partNumber 통계' : '모드별 통계';
+    final totalTitle = partNumber != null ? 'Part $partNumber 전체' : '전체 통계';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '모드별 통계',
+          title,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -276,7 +485,7 @@ class _StatisticsTab extends ConsumerWidget {
                   Icon(Icons.assessment, color: Colors.white, size: 28),
                   const SizedBox(width: 8),
                   Text(
-                    '전체 통계',
+                    totalTitle,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -456,7 +665,7 @@ class _StatisticsTab extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '시험모드 카테고리별 분석',
+          '카테고리별 분석 (시험모드)',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -509,7 +718,572 @@ class _StatisticsTab extends ConsumerWidget {
                       BorderRadius.circular(AppDimensions.radiusSmall),
                 ),
                 child: Icon(
-                  categoryName == '문법' ? Icons.menu_book : Icons.translate,
+                  categoryName == '문법'
+                      ? Icons.menu_book
+                      : categoryName == '어휘'
+                          ? Icons.translate
+                          : Icons.format_quote, // For 문장삽입 (sentence insert)
+                  color: color,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: AppDimensions.paddingMedium),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      categoryName,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${category.totalCorrect}/${category.totalQuestions} 정답 (${percentage}%)',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: color,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          children: [
+            const SizedBox(height: 8),
+            // Overall progress bar
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+              child: LinearProgressIndicator(
+                value: category.totalCorrect / category.totalQuestions,
+                backgroundColor: Colors.grey[200],
+                valueColor: AlwaysStoppedAnimation<Color>(color),
+                minHeight: 10,
+              ),
+            ),
+            const SizedBox(height: AppDimensions.paddingMedium),
+            // Level breakdown
+            ...category.levels.entries.map((levelEntry) {
+              final level = levelEntry.key;
+              final levelStats = levelEntry.value;
+              final levelPercentage = levelStats.percentage.round();
+              final levelColor = levelPercentage >= 70
+                  ? AppColors.successColor
+                  : levelPercentage >= 50
+                      ? Colors.orange
+                      : AppColors.errorColor;
+
+              return Padding(
+                padding:
+                    const EdgeInsets.only(bottom: AppDimensions.paddingSmall),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: levelColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: levelColor.withOpacity(0.3)),
+                      ),
+                      child: Center(
+                        child: Text(
+                          level.toString(),
+                          style: TextStyle(
+                            color: levelColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppDimensions.paddingMedium),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Level $level',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyLarge
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                              ),
+                              Text(
+                                '${levelStats.correct}/${levelStats.total} (${levelPercentage}%)',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: levelColor,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: levelStats.correct / levelStats.total,
+                              backgroundColor: Colors.grey[200],
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(levelColor),
+                              minHeight: 8,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PartStatisticsTab extends ConsumerWidget {
+  final int partNumber;
+
+  const _PartStatisticsTab({required this.partNumber});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userProgressAsync = ref.watch(userProgressProvider);
+    final partStatsAsync = ref.watch(partStatisticsProvider(partNumber));
+    final partHierarchicalStatsAsync =
+        ref.watch(partHierarchicalStatisticsProvider(partNumber));
+
+    return userProgressAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: AppColors.errorColor,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Error loading statistics',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+          ],
+        ),
+      ),
+      data: (userProgress) => SingleChildScrollView(
+        padding: const EdgeInsets.all(AppDimensions.paddingMedium),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Part Header Card
+            _buildPartHeaderCard(context, partNumber),
+            const SizedBox(height: AppDimensions.paddingLarge),
+
+            // Part-Specific Statistics
+            partStatsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => const SizedBox.shrink(),
+              data: (partStats) => Column(
+                children: [
+                  _buildModeStatisticsSection(context, partStats, partNumber),
+                  const SizedBox(height: AppDimensions.paddingLarge),
+                ],
+              ),
+            ),
+
+            // Part-Specific Hierarchical Category Statistics (문법/어휘)
+            partHierarchicalStatsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => const SizedBox.shrink(),
+              data: (hierarchicalStats) {
+                if (hierarchicalStats.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+                return Column(
+                  children: [
+                    _buildHierarchicalStatisticsSection(
+                        context, hierarchicalStats),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPartHeaderCard(BuildContext context, int partNumber) {
+    final partInfo = {
+      5: {
+        'title': 'Part 5',
+        'subtitle': 'Incomplete Sentences',
+        'description': '문법 & 어휘',
+        'icon': Icons.edit_note,
+        'color': const Color(0xFF4ECDC4),
+      },
+      6: {
+        'title': 'Part 6',
+        'subtitle': 'Text Completion',
+        'description': '지문 완성',
+        'icon': Icons.article,
+        'color': const Color(0xFF45B7D1),
+      },
+    };
+
+    final info = partInfo[partNumber]!;
+
+    return Container(
+      padding: const EdgeInsets.all(AppDimensions.paddingLarge),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            info['color'] as Color,
+            (info['color'] as Color).withOpacity(0.7),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+        boxShadow: AppTheme.cardShadow,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: Icon(
+              info['icon'] as IconData,
+              color: Colors.white,
+              size: 32,
+            ),
+          ),
+          const SizedBox(width: AppDimensions.paddingLarge),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  info['title'] as String,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  info['subtitle'] as String,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: Colors.white70,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  info['description'] as String,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.white70,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModeStatisticsSection(
+      BuildContext context, dynamic separateStats, int partNumber) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Part $partNumber 통계',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: AppDimensions.paddingMedium),
+
+        // Total Statistics Card for this Part
+        Container(
+          padding: const EdgeInsets.all(AppDimensions.paddingLarge),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.successColor,
+                AppColors.successColor.withOpacity(0.8),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+            boxShadow: AppTheme.cardShadow,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.assessment, color: Colors.white, size: 28),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Part $partNumber 전체',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppDimensions.paddingMedium),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildTotalStatItem(
+                    context,
+                    '총 문제',
+                    '${separateStats.totalQuestionsAnswered}',
+                    Icons.quiz,
+                  ),
+                  _buildTotalStatItem(
+                    context,
+                    '정답 수',
+                    '${separateStats.totalCorrectAnswers}',
+                    Icons.check_circle,
+                  ),
+                  _buildTotalStatItem(
+                    context,
+                    '정답률',
+                    '${separateStats.overallAccuracy.toStringAsFixed(1)}%',
+                    Icons.my_location,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: AppDimensions.paddingMedium),
+
+        // Practice and Exam Statistics Cards for this Part
+        Row(
+          children: [
+            // Practice Statistics
+            Expanded(
+              child: _buildModeStatCard(
+                context,
+                '연습 모드',
+                separateStats.practiceQuestionsAnswered,
+                separateStats.practiceCorrectAnswers,
+                separateStats.practiceAccuracy,
+                AppColors.primaryColor,
+                Icons.school,
+              ),
+            ),
+            const SizedBox(width: AppDimensions.paddingMedium),
+            // Exam Statistics
+            Expanded(
+              child: _buildModeStatCard(
+                context,
+                '시험 모드',
+                separateStats.examQuestionsAnswered,
+                separateStats.examCorrectAnswers,
+                separateStats.examAccuracy,
+                Colors.orange,
+                Icons.assessment,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTotalStatItem(
+      BuildContext context, String label, String value, IconData icon) {
+    return Column(
+      children: [
+        Icon(icon, color: Colors.white, size: 32),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Colors.white70,
+              ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildModeStatCard(
+    BuildContext context,
+    String mode,
+    int questionsAnswered,
+    int correctAnswers,
+    double accuracy,
+    Color color,
+    IconData icon,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(AppDimensions.paddingMedium),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+        border: Border.all(color: color, width: 2),
+        boxShadow: AppTheme.cardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  mode,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppDimensions.paddingMedium),
+          _buildModeStatRow(context, '문제 수', '$questionsAnswered', color),
+          const SizedBox(height: 8),
+          _buildModeStatRow(context, '정답 수', '$correctAnswers', color),
+          const SizedBox(height: 8),
+          _buildModeStatRow(
+              context, '정답률', '${accuracy.toStringAsFixed(1)}%', color),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModeStatRow(
+      BuildContext context, String label, String value, Color color) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.textSecondary,
+              ),
+        ),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHierarchicalStatisticsSection(
+    BuildContext context,
+    Map<String, dynamic> hierarchicalStats,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '카테고리별 분석 (시험모드)',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: AppDimensions.paddingMedium),
+        ...hierarchicalStats.entries.map((entry) =>
+            _buildHierarchicalCategoryCard(context, entry.key, entry.value)),
+      ],
+    );
+  }
+
+  Widget _buildHierarchicalCategoryCard(
+    BuildContext context,
+    String categoryName,
+    dynamic category,
+  ) {
+    final percentage = category.percentage.round();
+    final color = percentage >= 70
+        ? AppColors.successColor
+        : percentage >= 50
+            ? Colors.orange
+            : AppColors.errorColor;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppDimensions.paddingMedium),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+        boxShadow: AppTheme.cardShadow,
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: true,
+          tilePadding: const EdgeInsets.all(AppDimensions.paddingMedium),
+          childrenPadding: const EdgeInsets.fromLTRB(
+            AppDimensions.paddingMedium,
+            0,
+            AppDimensions.paddingMedium,
+            AppDimensions.paddingMedium,
+          ),
+          title: Row(
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius:
+                      BorderRadius.circular(AppDimensions.radiusSmall),
+                ),
+                child: Icon(
+                  categoryName == '문법'
+                      ? Icons.menu_book
+                      : categoryName == '어휘'
+                          ? Icons.translate
+                          : Icons.format_quote, // For 문장삽입 (sentence insert)
                   color: color,
                   size: 28,
                 ),

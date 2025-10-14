@@ -30,15 +30,29 @@ final practiceSessionsProvider =
 });
 
 // Metadata-only practice sessions provider - only gets dates and counts (much faster)
+// Legacy provider for Part 5 (backward compatibility)
 final practiceSessionMetadataProvider =
     FutureProvider<List<PracticeSessionMetadata>>((ref) async {
+  return ref.read(practiceSessionMetadataByPartProvider(5).future);
+});
+
+// Part-specific practice session metadata provider
+final practiceSessionMetadataByPartProvider =
+    FutureProvider.family<List<PracticeSessionMetadata>, int>((ref, partNumber) async {
   final userDataRepo = ref.read(userDataRepositoryProvider);
   final questionRepo = ref.read(questionRepositoryProvider);
 
   try {
-    // Get available practice dates from Firebase (all dates with questions)
-    final availableDates = await questionRepo.getAvailablePracticeDates();
-    
+    // Get available practice dates from Firebase based on part number
+    List<String> availableDates;
+    if (partNumber == 5) {
+      availableDates = await questionRepo.getAvailablePracticeDates();
+    } else if (partNumber == 6) {
+      availableDates = await questionRepo.getAvailablePart6PracticeDates();
+    } else {
+      return [];
+    }
+
     if (availableDates.isEmpty) {
       return [];
     }
@@ -46,10 +60,38 @@ final practiceSessionMetadataProvider =
     // Get actual learning sessions from user data
     final learningSessions = await userDataRepo.getLearningSessions();
 
-    // Group user sessions by practice date (extracted from session ID, not startTime) for easy lookup
+    print('🔍 Part $partNumber: Total learning sessions found: ${learningSessions.length}');
+
+    // Group user sessions by practice date and filter by part number
     final sessionsByDate = <DateTime, List<LearningSession>>{};
     for (final session in learningSessions) {
-      if (session.sessionType == 'practice') {
+      // Debug: Show session type and first question ID
+      final firstQuestionId = session.questionIds.isNotEmpty ? session.questionIds.first : 'no questions';
+      print('🔍 Part $partNumber: Checking session ${session.id} (type: ${session.sessionType}, first Q: $firstQuestionId)');
+
+      // Accept both 'practice' (Part 5) and 'part6_practice' (Part 6) session types
+      if (session.sessionType == 'practice' || session.sessionType == 'part6_practice') {
+        // Check if this session is for the requested part
+        // Part 5: question IDs start with "PRAC_" and do NOT contain "Part6"
+        // Part 6: question IDs contain "Part6"
+        bool isCorrectPart = false;
+        for (final questionId in session.questionIds) {
+          if (partNumber == 5 && questionId.startsWith('PRAC_') && !questionId.contains('Part6')) {
+            isCorrectPart = true;
+            print('✅ Part 5 match found: $questionId');
+            break;
+          } else if (partNumber == 6 && questionId.contains('Part6')) {
+            isCorrectPart = true;
+            print('✅ Part 6 match found: $questionId');
+            break;
+          }
+        }
+
+        if (!isCorrectPart) {
+          print('❌ Session ${session.id} does not match Part $partNumber');
+          continue;
+        }
+
         // Extract date from session ID (format: practice_YYYY-MM-DD_timestamp)
         final practiceDate = _extractDateFromSessionId(session.id);
         if (practiceDate != null) {
@@ -59,30 +101,30 @@ final practiceSessionMetadataProvider =
             practiceDate.day
           );
           sessionsByDate.putIfAbsent(dateKey, () => []).add(session);
-          print('📅 Session ${session.id}: extracted date $dateKey (${session.questionsAnswered} questions, ${session.correctAnswers} correct)');
+          print('📅 Part $partNumber Session ${session.id}: extracted date $dateKey (${session.questionsAnswered} questions, ${session.correctAnswers} correct)');
         } else {
           print('⚠️ Could not extract date from session ID: ${session.id}');
         }
       }
     }
 
-    print('📊 Total sessions grouped by date: ${sessionsByDate.length} dates with practice data');
+    print('📊 Part $partNumber: Total sessions grouped by date: ${sessionsByDate.length} dates with practice data');
 
     // Create metadata for ALL available dates from Firebase
     final metadataList = <PracticeSessionMetadata>[];
-    
+
     for (int i = 0; i < availableDates.length; i++) {
       final dateString = availableDates[i];
       final date = DateTime.parse(dateString);
       final dateKey = DateTime(date.year, date.month, date.day);
       final sessionNumber = availableDates.length - i;
-      
+
       // Check if user has actual practice data for this date
       final userSessions = sessionsByDate[dateKey];
-      
+
       int completedQuestions = 0;
       int correctAnswers = 0;
-      
+
       if (userSessions != null && userSessions.isNotEmpty) {
         // User has practiced on this date - use actual data
         for (final session in userSessions) {
@@ -90,13 +132,13 @@ final practiceSessionMetadataProvider =
           correctAnswers += session.correctAnswers;
         }
       }
-      
+
       // Always add the date (since it has questions available)
       metadataList.add(PracticeSessionMetadata(
         id: 'firebase_${dateString.replaceAll('-', '_')}',
         date: date,
-        totalQuestions: 10, // Fixed number per practice session
-        completedQuestions: completedQuestions.clamp(0, 10),
+        totalQuestions: partNumber == 6 ? 4 : 10, // Part 6 has 4 questions per passage, Part 5 has 10
+        completedQuestions: completedQuestions.clamp(0, partNumber == 6 ? 4 : 10),
         accuracy: completedQuestions > 0 ? correctAnswers / completedQuestions : 0.0,
         sessionNumber: sessionNumber,
       ));
@@ -104,6 +146,7 @@ final practiceSessionMetadataProvider =
 
     return metadataList;
   } catch (e) {
+    print('❌ Error loading Part $partNumber practice metadata: $e');
     // Return empty list on error
     return [];
   }
@@ -147,6 +190,19 @@ final examQuestionsByRoundProvider =
     FutureProvider.family<List<Question>, String>((ref, round) async {
   final questionRepo = ref.read(questionRepositoryProvider);
   return await questionRepo.getExamQuestionsByRound(round);
+});
+
+// Part 6 available exam rounds provider
+final availablePart6ExamRoundsProvider = FutureProvider<List<String>>((ref) async {
+  final questionRepo = ref.read(questionRepositoryProvider);
+  return await questionRepo.getAvailablePart6ExamRounds();
+});
+
+// Part 6 exam questions for a specific round provider
+final part6ExamQuestionsByRoundProvider =
+    FutureProvider.family<List<Question>, String>((ref, round) async {
+  final questionRepo = ref.read(questionRepositoryProvider);
+  return await questionRepo.getPart6ExamQuestionsByRound(round);
 });
 
 // Analytics repository provider
@@ -196,37 +252,53 @@ final repositoryInitializerProvider = FutureProvider<void>((ref) async {
 });
 
 // Helper function to extract date from session ID
-// Session ID format: "practice_YYYY-MM-DD_timestamp" or "firebase_YYYY-MM-DD_timestamp"
+// Session ID formats:
+// - Part 5: "practice_YYYY-MM-DD_timestamp"
+// - Part 6: "part6_practice_YYYY-MM-DD_timestamp"
+// - Firebase: "firebase_YYYY-MM-DD_timestamp" or "firebase_YYYY_MM_DD"
 DateTime? _extractDateFromSessionId(String sessionId) {
   try {
     // Split by underscore to get parts
     final parts = sessionId.split('_');
     if (parts.length < 2) return null;
 
-    // The date should be the second part (index 1)
-    // For IDs like "practice_2025-10-01_123456" or "firebase_2025_10_01"
-    String datePart = parts[1];
+    // Try to find a part that looks like a date (YYYY-MM-DD format)
+    for (int i = 1; i < parts.length; i++) {
+      final part = parts[i];
 
-    // Try parsing as YYYY-MM-DD format first
-    if (datePart.contains('-')) {
-      return DateTime.parse(datePart);
+      // Try parsing as YYYY-MM-DD format
+      if (part.contains('-') && part.length >= 8) {
+        try {
+          return DateTime.parse(part);
+        } catch (e) {
+          // Continue to next part if parsing fails
+          continue;
+        }
+      }
+
+      // Try parsing as YYYYMMDD format (8 digits)
+      if (part.length == 8 && int.tryParse(part) != null) {
+        try {
+          final year = int.parse(part.substring(0, 4));
+          final month = int.parse(part.substring(4, 6));
+          final day = int.parse(part.substring(6, 8));
+          return DateTime(year, month, day);
+        } catch (e) {
+          continue;
+        }
+      }
     }
 
-    // Check if it's in format firebase_YYYY_MM_DD
-    if (parts.length >= 4 && parts[1].length == 4) {
-      // Format: firebase_2025_10_01
-      final year = int.parse(parts[1]);
-      final month = int.parse(parts[2]);
-      final day = int.parse(parts[3]);
-      return DateTime(year, month, day);
-    }
-
-    // Try parsing as YYYYMMDD format
-    if (datePart.length == 8) {
-      final year = int.parse(datePart.substring(0, 4));
-      final month = int.parse(datePart.substring(4, 6));
-      final day = int.parse(datePart.substring(6, 8));
-      return DateTime(year, month, day);
+    // Check if it's in format firebase_YYYY_MM_DD (parts spread across indices)
+    if (parts.length >= 4 && parts[1].length == 4 && int.tryParse(parts[1]) != null) {
+      try {
+        final year = int.parse(parts[1]);
+        final month = int.parse(parts[2]);
+        final day = int.parse(parts[3]);
+        return DateTime(year, month, day);
+      } catch (e) {
+        // Fall through
+      }
     }
 
     return null;

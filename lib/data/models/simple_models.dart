@@ -25,6 +25,9 @@ class SimpleQuestion extends Equatable {
   final List<String>? tags;
   final DateTime? createdAt;
   final bool isBookmarked;
+  // Part 6 specific fields
+  final String? passageText;        // Reading passage for Part 6
+  final String? passageTextKorean;  // Korean translation of passage
 
   const SimpleQuestion({
     required this.id,
@@ -38,6 +41,8 @@ class SimpleQuestion extends Equatable {
     this.tags,
     this.createdAt,
     this.isBookmarked = false,
+    this.passageText,
+    this.passageTextKorean,
   });
 
   static List<String> _extractTags(dynamic tagsData) {
@@ -95,6 +100,8 @@ class SimpleQuestion extends Equatable {
                 ? DateTime.parse(data['createdAt'] as String)
                 : (data['createdAt'] as dynamic).toDate())
             : DateTime.now(),
+        passageText: data['passageText'] as String?,
+        passageTextKorean: data['passageTextKorean'] as String?,
       );
     } catch (e) {
       print('❌ Error parsing question $id: $e');
@@ -116,6 +123,8 @@ class SimpleQuestion extends Equatable {
       'questionType': questionType,
       'tags': tags,
       'createdAt': createdAt?.toIso8601String(),
+      if (passageText != null) 'passageText': passageText,
+      if (passageTextKorean != null) 'passageTextKorean': passageTextKorean,
     };
   }
 
@@ -133,6 +142,8 @@ class SimpleQuestion extends Equatable {
       tags: json['tags'] != null ? List<String>.from(json['tags'] as List) : null,
       createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : null,
       isBookmarked: json['isBookmarked'] as bool? ?? false,
+      passageText: json['passageText'] as String?,
+      passageTextKorean: json['passageTextKorean'] as String?,
     );
   }
 
@@ -149,6 +160,8 @@ class SimpleQuestion extends Equatable {
       'tags': tags,
       'createdAt': createdAt?.toIso8601String(),
       'isBookmarked': isBookmarked,
+      if (passageText != null) 'passageText': passageText,
+      if (passageTextKorean != null) 'passageTextKorean': passageTextKorean,
     };
   }
 
@@ -165,6 +178,8 @@ class SimpleQuestion extends Equatable {
         tags,
         createdAt,
         isBookmarked,
+        passageText,
+        passageTextKorean,
       ];
 }
 

@@ -287,8 +287,9 @@ class _PracticeDateModeScreenState extends ConsumerState<PracticeDateModeScreen>
       print('   - Questions: ${questions.length}');
       print('   - Correct: $_correctAnswers');
 
-      // Force refresh the practice metadata provider
+      // Force refresh the practice metadata provider (both legacy and part-specific)
       ref.invalidate(practiceSessionMetadataProvider);
+      ref.invalidate(practiceSessionMetadataByPartProvider(5));
 
     } catch (e) {
       print('❌ Error saving learning session: $e');
@@ -315,8 +316,9 @@ class _PracticeDateModeScreenState extends ConsumerState<PracticeDateModeScreen>
       await userRepository.saveCompletedSession(learningSession);
       print('💾 Progress saved: $questionsAnswered/${questions.length} questions, $_correctAnswers correct');
 
-      // Force refresh the practice metadata provider
+      // Force refresh the practice metadata provider (both legacy and part-specific)
       ref.invalidate(practiceSessionMetadataProvider);
+      ref.invalidate(practiceSessionMetadataByPartProvider(5));
 
     } catch (e) {
       print('❌ Error saving progress session: $e');

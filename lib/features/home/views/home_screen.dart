@@ -45,64 +45,34 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ),
 
-              // Main Menu Cards (Duolingo bubble style)
-              SliverPadding(
-                padding: const EdgeInsets.all(20),
-                sliver: SliverGrid(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 20,
-                    crossAxisSpacing: 20,
-                    childAspectRatio: 1.0,
-                  ),
-                  delegate: SliverChildListDelegate([
-                    _buildCuteMenuCard(
-                      context,
-                      ref: ref,
-                      title: 'Part 5',
-                      subtitle: 'Grammar & Vocabulary',
-                      emoji: '📝',
-                      color: const Color(0xFF1CB0F6), // Duolingo blue
-                      onTap: () async {
-                        await context.push('/part5');
-                        // Refresh data when returning from Part 5
-                        ref.invalidate(userProgressProvider);
-                        ref.invalidate(examResultsProvider);
-                        ref.invalidate(combinedStatisticsProvider);
-                      },
-                    ),
-                    _buildCuteMenuCard(
-                      context,
-                      ref: ref,
-                      title: '복습하기',
-                      subtitle: 'Review & Practice',
-                      emoji: '🔄',
-                      color: const Color(0xFFFF9600), // Duolingo orange
-                      onTap: () async {
-                        await context.push('/review-select');
-                        // Refresh data when returning
-                        ref.invalidate(userProgressProvider);
-                        ref.invalidate(examResultsProvider);
-                        ref.invalidate(combinedStatisticsProvider);
-                      },
-                    ),
-                    _buildCuteMenuCard(
-                      context,
-                      ref: ref,
-                      title: '통계 & 업적',
-                      subtitle: 'Progress & Achievements',
-                      emoji: '📊',
-                      color: const Color(0xFFCE82FF), // Duolingo purple
-                      onTap: () async {
-                        await context.push('/statistics-achievements');
-                        // Refresh data when returning
-                        ref.invalidate(userProgressProvider);
-                        ref.invalidate(examResultsProvider);
-                        ref.invalidate(combinedStatisticsProvider);
-                      },
-                    ),
-                  ]),
-                ),
+              // Practice Hub Banner
+              SliverToBoxAdapter(
+                child: _buildPracticeHubBanner(context, ref),
+              ),
+
+              // Exam Hub Banner
+              SliverToBoxAdapter(
+                child: _buildExamHubBanner(context, ref),
+              ),
+
+              // Wrong Answer Hub Banner
+              SliverToBoxAdapter(
+                child: _buildWrongAnswerHubBanner(context, ref),
+              ),
+
+              // Bookmark Hub Banner
+              SliverToBoxAdapter(
+                child: _buildBookmarkHubBanner(context, ref),
+              ),
+
+              // Statistics & Achievements Banner
+              SliverToBoxAdapter(
+                child: _buildStatisticsBanner(context, ref),
+              ),
+
+              // Add some bottom padding
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 24),
               ),
             ],
           ),
@@ -119,8 +89,8 @@ class HomeScreen extends ConsumerWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFF58CC02), // Duolingo green
-            Color(0xFF89E219), // Bright green
+            Color(0xFF4CAF50), // Duolingo green
+            Color(0xFF66BB6A), // Bright green
           ],
         ),
       ),
@@ -135,11 +105,11 @@ class HomeScreen extends ConsumerWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFF9600), // Orange like Duolingo
+                  color: const Color(0xFFFF8A65), // Orange like Duolingo
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFFFF9600).withOpacity(0.3),
+                      color: const Color(0xFFFF8A65).withOpacity(0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),
@@ -170,11 +140,11 @@ class HomeScreen extends ConsumerWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1CB0F6), // Blue like Duolingo
+                  color: const Color(0xFF5C6BC0), // Blue like Duolingo
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF1CB0F6).withOpacity(0.3),
+                      color: const Color(0xFF5C6BC0).withOpacity(0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),
@@ -265,11 +235,11 @@ class HomeScreen extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFD900), // Gold color
+                        color: const Color(0xFFFFC107), // Gold color
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFFFD900).withOpacity(0.3),
+                            color: const Color(0xFFFFC107).withOpacity(0.3),
                             blurRadius: 8,
                             offset: const Offset(0, 4),
                           ),
@@ -322,7 +292,7 @@ class HomeScreen extends ConsumerWidget {
                               value: userProgress.currentLevelProgress,
                               backgroundColor: Colors.transparent,
                               valueColor: const AlwaysStoppedAnimation<Color>(
-                                Color(0xFFFFD900),
+                                Color(0xFFFFC107),
                               ),
                             ),
                           ),
@@ -357,20 +327,20 @@ class HomeScreen extends ConsumerWidget {
           end: Alignment.bottomRight,
           colors: isCompleted
               ? [
-                  const Color(0xFF58CC02),
-                  const Color(0xFF89E219)
+                  const Color(0xFF4CAF50),
+                  const Color(0xFF66BB6A)
                 ] // Green when completed
               : [
-                  const Color(0xFF1CB0F6),
-                  const Color(0xFF42A5F5)
+                  const Color(0xFF5C6BC0),
+                  const Color(0xFF7986CB)
                 ], // Blue when in progress
         ),
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
             color: (isCompleted
-                    ? const Color(0xFF58CC02)
-                    : const Color(0xFF1CB0F6))
+                    ? const Color(0xFF4CAF50)
+                    : const Color(0xFF5C6BC0))
                 .withOpacity(0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
@@ -512,7 +482,7 @@ class HomeScreen extends ConsumerWidget {
                   ? combinedStats.totalQuestionsAnswered.toString()
                   : userProgress.totalQuestionsAnswered.toString(),
               emoji: '📚',
-              color: const Color(0xFF1CB0F6), // Duolingo blue
+              color: const Color(0xFF5C6BC0), // Duolingo blue
             ),
           ),
           const SizedBox(width: 16),
@@ -524,7 +494,7 @@ class HomeScreen extends ConsumerWidget {
                   ? '${combinedStats.overallAccuracy.toInt()}%'
                   : '${userProgress.accuracyPercentage.toInt()}%',
               emoji: '🎯',
-              color: const Color(0xFF58CC02), // Duolingo green
+              color: const Color(0xFF4CAF50), // Duolingo green
             ),
           ),
           const SizedBox(width: 16),
@@ -534,7 +504,7 @@ class HomeScreen extends ConsumerWidget {
               title: '연속 공부일',
               value: '${userProgress.currentStreak}',
               emoji: '🔥',
-              color: const Color(0xFFFF9600), // Duolingo orange
+              color: const Color(0xFFFF8A65), // Duolingo orange
             ),
           ),
         ],
@@ -618,96 +588,576 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildCuteMenuCard(
-    BuildContext context, {
-    required WidgetRef ref,
-    required String title,
-    required String subtitle,
-    required String emoji,
-    required Color color,
-    required Future<void> Function() onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 140,
-        width: 140,
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(30),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-              spreadRadius: 2,
+  Widget _buildPracticeHubBanner(BuildContext context, WidgetRef ref) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () async {
+            await context.push('/practice-hub');
+            // Refresh data when returning
+            ref.invalidate(userProgressProvider);
+            ref.invalidate(examResultsProvider);
+            ref.invalidate(combinedStatisticsProvider);
+          },
+          borderRadius: BorderRadius.circular(25),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF7E57C2), // Purple
+                  Color(0xFF9575CD), // Pink
+                ],
+              ),
+              borderRadius: BorderRadius.circular(25),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF7E57C2).withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                  spreadRadius: 2,
+                ),
+              ],
             ),
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(30),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+            child: Row(
               children: [
-                // Large emoji in white circle (Duolingo style)
+                // Icon Container
                 Container(
                   width: 60,
                   height: 60,
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(15),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
                       ),
                     ],
                   ),
-                  child: Center(
+                  child: const Center(
                     child: Text(
-                      emoji,
-                      style: const TextStyle(fontSize: 30),
+                      '📅',
+                      style: TextStyle(fontSize: 32),
                     ),
                   ),
                 ),
 
-                const SizedBox(height: 12),
+                const SizedBox(width: 16),
 
-                // Title
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                // Text Content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '매일 연습문제',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
 
-                const SizedBox(height: 4),
-
-                // Subtitle
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.9),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
+                // Arrow Icon
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(18),
                   ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  child: const Icon(
+                    Icons.arrow_forward,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExamHubBanner(BuildContext context, WidgetRef ref) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () async {
+            await context.push('/exam-hub');
+            // Refresh data when returning
+            ref.invalidate(userProgressProvider);
+            ref.invalidate(examResultsProvider);
+            ref.invalidate(combinedStatisticsProvider);
+          },
+          borderRadius: BorderRadius.circular(25),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF42A5F5), // Deep Blue
+                  Color(0xFF64B5F6), // Light Blue
+                ],
+              ),
+              borderRadius: BorderRadius.circular(25),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF42A5F5).withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                // Icon Container
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: const Center(
+                    child: Text(
+                      '📝',
+                      style: TextStyle(fontSize: 32),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 16),
+
+                // Text Content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '모의고사 풀기',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Arrow Icon
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: const Icon(
+                    Icons.arrow_forward,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWrongAnswerHubBanner(BuildContext context, WidgetRef ref) {
+    final wrongAnswersAsync = ref.watch(wrongAnswersProvider);
+
+    return wrongAnswersAsync.when(
+      loading: () => _buildWrongAnswerHubBannerContent(context, ref, 0),
+      error: (error, stack) =>
+          _buildWrongAnswerHubBannerContent(context, ref, 0),
+      data: (wrongAnswers) =>
+          _buildWrongAnswerHubBannerContent(context, ref, wrongAnswers.length),
+    );
+  }
+
+  Widget _buildWrongAnswerHubBannerContent(
+      BuildContext context, WidgetRef ref, int wrongCount) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () async {
+            await context.push('/wrong-answer-hub');
+            // Refresh data when returning
+            ref.invalidate(userProgressProvider);
+            ref.invalidate(wrongAnswersProvider);
+            ref.invalidate(combinedStatisticsProvider);
+          },
+          borderRadius: BorderRadius.circular(25),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFFE57373), // Red
+                  Color(0xFFEF5350), // Light red
+                ],
+              ),
+              borderRadius: BorderRadius.circular(25),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFE57373).withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                // Icon Container
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: const Center(
+                    child: Text(
+                      '❌',
+                      style: TextStyle(fontSize: 32),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 16),
+
+                // Text Content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '오답노트',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        wrongCount > 0
+                            ? '$wrongCount 문제 • Review'
+                            : '복습할 문제 없음 🎉',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Arrow Icon
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: const Icon(
+                    Icons.arrow_forward,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBookmarkHubBanner(BuildContext context, WidgetRef ref) {
+    final favoritesAsync = ref.watch(favoritesProvider);
+
+    return favoritesAsync.when(
+      loading: () => _buildBookmarkHubBannerContent(context, ref, 0),
+      error: (error, stack) => _buildBookmarkHubBannerContent(context, ref, 0),
+      data: (favorites) =>
+          _buildBookmarkHubBannerContent(context, ref, favorites.length),
+    );
+  }
+
+  Widget _buildBookmarkHubBannerContent(
+      BuildContext context, WidgetRef ref, int bookmarkCount) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () async {
+            await context.push('/bookmark-hub');
+            // Refresh data when returning
+            ref.invalidate(userProgressProvider);
+            ref.invalidate(favoritesProvider);
+            ref.invalidate(combinedStatisticsProvider);
+          },
+          borderRadius: BorderRadius.circular(25),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFFFFB74D), // Orange
+                  Color(0xFFFFCA28), // Light orange
+                ],
+              ),
+              borderRadius: BorderRadius.circular(25),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFFB74D).withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                // Icon Container
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: const Center(
+                    child: Text(
+                      '🔖',
+                      style: TextStyle(fontSize: 32),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 16),
+
+                // Text Content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '즐겨찾기',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        bookmarkCount > 0
+                            ? '$bookmarkCount 문제 • Saved Questions'
+                            : '북마크한 문제 없음 📚',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Arrow Icon
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: const Icon(
+                    Icons.arrow_forward,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatisticsBanner(BuildContext context, WidgetRef ref) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () async {
+            await context.push('/statistics-achievements');
+            // Refresh data when returning
+            ref.invalidate(userProgressProvider);
+            ref.invalidate(examResultsProvider);
+            ref.invalidate(combinedStatisticsProvider);
+          },
+          borderRadius: BorderRadius.circular(25),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF26A69A), // Green
+                  Color(0xFF4DB6AC), // Bright green
+                ],
+              ),
+              borderRadius: BorderRadius.circular(25),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF26A69A).withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                // Icon Container
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: const Center(
+                    child: Text(
+                      '📊',
+                      style: TextStyle(fontSize: 32),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 16),
+
+                // Text Content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '통계보기',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Arrow Icon
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: const Icon(
+                    Icons.arrow_forward,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                 ),
               ],
             ),

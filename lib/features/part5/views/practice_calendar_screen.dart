@@ -7,7 +7,12 @@ import 'package:egg_toeic/providers/app_providers.dart';
 import 'package:egg_toeic/providers/repository_providers.dart';
 
 class PracticeCalendarScreen extends ConsumerStatefulWidget {
-  const PracticeCalendarScreen({super.key});
+  final int partNumber; // 5 or 6
+
+  const PracticeCalendarScreen({
+    super.key,
+    this.partNumber = 5, // Default to Part 5 for backward compatibility
+  });
 
   @override
   ConsumerState<PracticeCalendarScreen> createState() =>
@@ -31,7 +36,7 @@ class _PracticeCalendarScreenState
 
   void _loadPracticeDataFromProvider() async {
     try {
-      final practiceMetadata = await ref.read(practiceSessionMetadataProvider.future);
+      final practiceMetadata = await ref.read(practiceSessionMetadataByPartProvider(widget.partNumber).future);
       final Map<DateTime, PracticeSessionData> newData = {};
 
       for (final metadata in practiceMetadata) {
@@ -50,7 +55,7 @@ class _PracticeCalendarScreenState
         });
       }
     } catch (e) {
-      print('❌ Error loading practice data: $e');
+      print('❌ Error loading practice data for Part ${widget.partNumber}: $e');
       // Keep empty data map to show "해당 날짜는 휴무!" for all dates
       if (mounted) {
         setState(() {
@@ -62,7 +67,7 @@ class _PracticeCalendarScreenState
 
   void _refreshData() {
     // Invalidate the provider to force fresh data from Firebase
-    ref.invalidate(practiceSessionMetadataProvider);
+    ref.invalidate(practiceSessionMetadataByPartProvider(widget.partNumber));
     // Reload data
     _loadPracticeDataFromProvider();
   }
@@ -82,13 +87,16 @@ class _PracticeCalendarScreenState
           ref.invalidate(userProgressProvider);
           ref.invalidate(examResultsProvider);
           ref.invalidate(combinedStatisticsProvider);
+          ref.invalidate(practiceSessionMetadataByPartProvider(widget.partNumber));
         }
       },
       child: Scaffold(
         backgroundColor: AppColors.backgroundLight,
         appBar: AppBar(
-        title: const Text('Daily Practice Calendar'),
-        backgroundColor: AppColors.primaryColor,
+        title: Text('Part ${widget.partNumber} - Daily Practice'),
+        backgroundColor: widget.partNumber == 6
+            ? const Color(0xFF42A5F5)
+            : AppColors.primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -143,7 +151,7 @@ class _PracticeCalendarScreenState
   Widget _buildStreakCard() {
     return Consumer(
       builder: (context, ref, child) {
-        final practiceMetadataAsync = ref.watch(practiceSessionMetadataProvider);
+        final practiceMetadataAsync = ref.watch(practiceSessionMetadataByPartProvider(widget.partNumber));
         
         return practiceMetadataAsync.when(
           data: (metadata) {
@@ -348,12 +356,12 @@ class _PracticeCalendarScreenState
             const SizedBox(height: 12),
             _buildLegendItem(
               color: const Color(0xFF64B5F6),
-              label: '1-9 questions',
+              label: widget.partNumber == 6 ? '1-3 questions' : '1-9 questions',
             ),
             const SizedBox(height: 12),
             _buildLegendItem(
               color: const Color(0xFF4CAF50),
-              label: '10 completed',
+              label: widget.partNumber == 6 ? '4 completed' : '10 completed',
               hasIcon: true,
             ),
             const SizedBox(height: 12),
@@ -484,8 +492,10 @@ class _PracticeCalendarScreenState
     } else if (practiceData != null && practiceData.completedQuestions > 0) {
       // User has answered at least one question
 
-      if (practiceData.completedQuestions >= 10) {
-        // 10 questions completed - show star icon
+      final totalQuestionsForPart = widget.partNumber == 6 ? 4 : 10;
+
+      if (practiceData.completedQuestions >= totalQuestionsForPart) {
+        // All questions completed - show star icon
         if (practiceData.isPerfectScore) {
           // Perfect score - gold background with star
           backgroundColor = const Color(0xFFFFC107);
@@ -498,8 +508,8 @@ class _PracticeCalendarScreenState
           statusIcon = const Icon(Icons.star, color: Colors.white, size: 14);
         }
       } else {
-        // Less than 10 questions - show color based on progress
-        final progressRatio = practiceData.completedQuestions / 10;
+        // Questions in progress - show color based on progress
+        final progressRatio = practiceData.completedQuestions / totalQuestionsForPart;
         // In progress - light blue with opacity based on progress
         backgroundColor = Color(0xFF64B5F6).withOpacity(0.5 + (progressRatio * 0.5));
         textColor = Colors.white;
@@ -779,33 +789,35 @@ class _PracticeCalendarScreenState
   }
 
   void _startTodaysPractice() {
-    final dateString = _formatDateForApi(_today);
-    context.push(
-        '/part5/practice/session/firebase_${dateString.replaceAll('-', '_')}');
+    _navigateToPractice(_today);
   }
 
   void _continueTodaysPractice() {
-    final dateString = _formatDateForApi(_today);
-    context.push(
-        '/part5/practice/session/firebase_${dateString.replaceAll('-', '_')}');
+    _navigateToPractice(_today);
   }
 
   void _startPracticeForDate(DateTime date) {
-    final dateString = _formatDateForApi(date);
-    context.push(
-        '/part5/practice/session/firebase_${dateString.replaceAll('-', '_')}');
+    _navigateToPractice(date);
   }
 
   void _continuePracticeForDate(DateTime date) {
-    final dateString = _formatDateForApi(date);
-    context.push(
-        '/part5/practice/session/firebase_${dateString.replaceAll('-', '_')}');
+    _navigateToPractice(date);
   }
 
   void _retryPracticeForDate(DateTime date) {
+    _navigateToPractice(date);
+  }
+
+  void _navigateToPractice(DateTime date) {
     final dateString = _formatDateForApi(date);
-    context.push(
-        '/part5/practice/session/firebase_${dateString.replaceAll('-', '_')}');
+    final sessionId = 'firebase_${dateString.replaceAll('-', '_')}';
+
+    // Route based on part number
+    if (widget.partNumber == 5) {
+      context.push('/part5/practice/session/$sessionId');
+    } else if (widget.partNumber == 6) {
+      context.push('/part6/practice/session/$sessionId');
+    }
   }
 
   int _calculateCurrentStreak() {

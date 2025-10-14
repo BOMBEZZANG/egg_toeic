@@ -44,6 +44,18 @@ abstract class QuestionRepository extends BaseRepository {
 
   /// Get exam questions for a specific round using metadata
   Future<List<Question>> getExamQuestionsByRound(String round);
+
+  /// Get available Part6 exam rounds from metadata
+  Future<List<String>> getAvailablePart6ExamRounds();
+
+  /// Get Part6 exam questions for a specific round
+  Future<List<Question>> getPart6ExamQuestionsByRound(String round);
+
+  /// Get available Part6 practice dates from metadata
+  Future<List<String>> getAvailablePart6PracticeDates();
+
+  /// Get Part6 practice questions for a specific date
+  Future<List<Question>> getPart6PracticeQuestionsByDate(String date);
 }
 
 class QuestionRepositoryImpl implements QuestionRepository {
@@ -804,6 +816,234 @@ class QuestionRepositoryImpl implements QuestionRepository {
       return null;
     } catch (e) {
       return null;
+    }
+  }
+
+  @override
+  Future<List<String>> getAvailablePart6ExamRounds() async {
+    try {
+      print('🔍 Fetching available Part6 exam rounds by scanning question IDs...');
+
+      // Get all Part6 exam questions and extract unique test numbers from IDs
+      final querySnapshot = await _firestore
+          .collection('part6examQuestions')
+          .where('status', isEqualTo: 'published')
+          .get();
+
+      final Set<String> uniqueRounds = {};
+
+      for (final doc in querySnapshot.docs) {
+        final questionId = doc.id;
+        // Extract test number from ID format: Part6_EXAM_T1_P6_Q131
+        final testNumber = _extractPart6TestNumberFromId(questionId);
+        if (testNumber != null) {
+          uniqueRounds.add('ROUND_$testNumber');
+        }
+      }
+
+      final availableRounds = uniqueRounds.toList();
+
+      // Sort rounds in order (ROUND_1, ROUND_2, etc.)
+      availableRounds.sort((a, b) {
+        final aNum = int.tryParse(a.replaceAll('ROUND_', '')) ?? 0;
+        final bNum = int.tryParse(b.replaceAll('ROUND_', '')) ?? 0;
+        return aNum.compareTo(bNum);
+      });
+
+      print('✅ Found ${availableRounds.length} available Part6 exam rounds: $availableRounds');
+      return availableRounds;
+
+    } catch (e) {
+      print('❌ Error fetching available Part6 exam rounds: $e');
+      return [];
+    }
+  }
+
+  @override
+  Future<List<Question>> getPart6ExamQuestionsByRound(String round) async {
+    try {
+      print('🔍 Fetching Part6 exam questions for round: $round');
+
+      // Extract test number from round (ROUND_1 -> 1, ROUND_2 -> 2)
+      final testNumber = int.tryParse(round.replaceAll('ROUND_', ''));
+      if (testNumber == null) {
+        print('❌ Invalid round format: $round');
+        return [];
+      }
+
+      print('🎯 Looking for Part6 questions with test number: T$testNumber');
+
+      // Get all Part6 exam questions and filter by test number in ID
+      final querySnapshot = await _firestore
+          .collection('part6examQuestions')
+          .where('status', isEqualTo: 'published')
+          .get();
+
+      final List<Question> roundQuestions = [];
+
+      for (final doc in querySnapshot.docs) {
+        final questionId = doc.id;
+        final questionTestNumber = _extractPart6TestNumberFromId(questionId);
+
+        // Filter questions that match the requested test number
+        if (questionTestNumber == testNumber) {
+          try {
+            final question = SimpleQuestion.fromFirestore(doc.data(), doc.id);
+            roundQuestions.add(question);
+            print('✅ Added Part6 question: $questionId (T$questionTestNumber)');
+          } catch (e) {
+            print('⚠️ Failed to parse Part6 question $questionId: $e');
+          }
+        }
+      }
+
+      print('✅ Found ${roundQuestions.length} Part6 questions for round $round (T$testNumber)');
+
+      // Sort questions by question number extracted from ID
+      roundQuestions.sort((a, b) {
+        final aNum = _extractPart6QuestionNumberFromId(a.id) ?? 0;
+        final bNum = _extractPart6QuestionNumberFromId(b.id) ?? 0;
+        return aNum.compareTo(bNum);
+      });
+
+      return roundQuestions;
+
+    } catch (e) {
+      print('❌ Error fetching Part6 exam questions for round $round: $e');
+      return [];
+    }
+  }
+
+  /// Extract test number from Part6 question ID
+  /// Format: Part6_EXAM_T1_P6_Q131 -> returns 1
+  int? _extractPart6TestNumberFromId(String questionId) {
+    try {
+      // Split by underscore and find the part that starts with 'T'
+      final parts = questionId.split('_');
+      for (final part in parts) {
+        if (part.startsWith('T') && part.length > 1) {
+          final testNumberStr = part.substring(1); // Remove 'T'
+          return int.tryParse(testNumberStr);
+        }
+      }
+      return null;
+    } catch (e) {
+      print('⚠️ Error extracting test number from Part6 ID $questionId: $e');
+      return null;
+    }
+  }
+
+  /// Extract question number from Part6 question ID for sorting
+  /// Format: Part6_EXAM_T1_P6_Q131 -> returns 131
+  int? _extractPart6QuestionNumberFromId(String questionId) {
+    try {
+      // Find the part that starts with 'Q' and extract the number after it
+      final parts = questionId.split('_');
+      for (final part in parts) {
+        if (part.startsWith('Q') && part.length > 1) {
+          final questionNumberStr = part.substring(1); // Remove 'Q'
+          return int.tryParse(questionNumberStr);
+        }
+      }
+      return null;
+    } catch (e) {
+      print('⚠️ Error extracting question number from Part6 ID $questionId: $e');
+      return null;
+    }
+  }
+
+  @override
+  Future<List<String>> getAvailablePart6PracticeDates() async {
+    try {
+      print('🔍 Fetching available Part6 practice dates from metadata...');
+
+      // Get Part6 practice summary metadata
+      final summaryDoc = await _firestore
+          .collection('metadata')
+          .doc('part6_practice')
+          .get();
+
+      if (!summaryDoc.exists) {
+        print('❌ Part6 practice summary metadata not found');
+        return [];
+      }
+
+      final data = summaryDoc.data()!;
+      final List<dynamic> availableDatesRaw = data['availableDates'] ?? [];
+      final availableDates = availableDatesRaw.cast<String>();
+
+      print('✅ Found ${availableDates.length} available Part6 practice dates: $availableDates');
+      return availableDates;
+
+    } catch (e) {
+      print('❌ Error fetching available Part6 practice dates: $e');
+      return [];
+    }
+  }
+
+  @override
+  Future<List<Question>> getPart6PracticeQuestionsByDate(String date) async {
+    try {
+      print('🔍 Fetching Part6 practice questions for date: $date');
+
+      // Get daily metadata for the specific date
+      final dailyMetadataDoc = await _firestore
+          .collection('metadata')
+          .doc('part6_practice')
+          .collection('daily')
+          .doc(date)
+          .get();
+
+      if (!dailyMetadataDoc.exists) {
+        print('❌ Daily Part6 practice metadata not found for date: $date - no questions available');
+        return [];
+      }
+
+      final dailyData = dailyMetadataDoc.data()!;
+      final List<dynamic> questionIdsRaw = dailyData['questionIds'] ?? [];
+      final questionIds = questionIdsRaw.cast<String>();
+
+      print('📋 Found ${questionIds.length} Part6 practice question IDs for date $date: $questionIds');
+
+      if (questionIds.isEmpty) {
+        print('❌ No Part6 practice question IDs found for date: $date - no questions available');
+        return [];
+      }
+
+      // Fetch questions by IDs from part6practiceQuestions collection
+      final questions = <Question>[];
+      for (final questionId in questionIds) {
+        try {
+          final doc = await _firestore
+              .collection('part6practiceQuestions')
+              .doc(questionId)
+              .get();
+
+          if (doc.exists) {
+            final question = SimpleQuestion.fromFirestore(doc.data()!, doc.id);
+            questions.add(question);
+          } else {
+            print('⚠️ Part6 practice question $questionId not found in collection');
+          }
+        } catch (e) {
+          print('❌ Error fetching Part6 practice question $questionId: $e');
+        }
+      }
+
+      print('✅ Successfully fetched ${questions.length} Part6 practice questions for date $date');
+
+      // Sort questions by question number if possible
+      questions.sort((a, b) {
+        final aNum = _extractPart6QuestionNumberFromId(a.id) ?? 0;
+        final bNum = _extractPart6QuestionNumberFromId(b.id) ?? 0;
+        return aNum.compareTo(bNum);
+      });
+
+      return questions;
+
+    } catch (e) {
+      print('❌ Error fetching Part6 practice questions for date $date: $e - no questions available');
+      return [];
     }
   }
 }

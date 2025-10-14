@@ -414,11 +414,20 @@ class CombinedStatistics {
 
 // Combined Statistics Provider
 final combinedStatisticsProvider = FutureProvider<CombinedStatistics>((ref) async {
-  // Get practice statistics from user progress
-  final userProgress = await ref.read(userProgressProvider.future);
+  // Get practice sessions (to include ALL parts' practice data)
+  final sessions = await ref.read(learningSessionsProvider.future);
 
   // Get exam results
   final examResults = await ref.read(examResultsProvider.future);
+
+  // Calculate practice statistics from ALL sessions (Part 5 + Part 6)
+  int practiceQuestionsAnswered = 0;
+
+  for (final session in sessions) {
+    if (session.sessionType == 'practice' || session.sessionType.contains('practice')) {
+      practiceQuestionsAnswered += session.questionsAnswered;
+    }
+  }
 
   // Calculate exam statistics
   int examQuestionsAnswered = 0;
@@ -433,16 +442,24 @@ final combinedStatisticsProvider = FutureProvider<CombinedStatistics>((ref) asyn
     }
   }
 
+  // Note: For practice correct answers, we need to calculate from sessions
+  int practiceCorrectAnswers = 0;
+  for (final session in sessions) {
+    if (session.sessionType == 'practice' || session.sessionType.contains('practice')) {
+      practiceCorrectAnswers += session.correctAnswers;
+    }
+  }
+
   // Combine practice and exam statistics
-  final totalQuestions = userProgress.totalQuestionsAnswered + examQuestionsAnswered;
-  final totalCorrect = userProgress.correctAnswers + examCorrectAnswers;
+  final totalQuestions = practiceQuestionsAnswered + examQuestionsAnswered;
+  final totalCorrect = practiceCorrectAnswers + examCorrectAnswers;
   final overallAccuracy = totalQuestions > 0 ? (totalCorrect / totalQuestions) * 100 : 0.0;
 
   return CombinedStatistics(
     totalQuestionsAnswered: totalQuestions,
     totalCorrectAnswers: totalCorrect,
     overallAccuracy: overallAccuracy,
-    practiceQuestionsAnswered: userProgress.totalQuestionsAnswered,
+    practiceQuestionsAnswered: practiceQuestionsAnswered,
     examQuestionsAnswered: examQuestionsAnswered,
   );
 });
@@ -474,11 +491,22 @@ class SeparateStatistics {
 
 // Separate Statistics Provider
 final separateStatisticsProvider = FutureProvider<SeparateStatistics>((ref) async {
-  // Get practice statistics from user progress
-  final userProgress = await ref.read(userProgressProvider.future);
+  // Get practice sessions (to include ALL parts' practice data)
+  final sessions = await ref.read(learningSessionsProvider.future);
 
   // Get exam results
   final examResults = await ref.read(examResultsProvider.future);
+
+  // Calculate practice statistics from ALL sessions (Part 5 + Part 6)
+  int practiceQuestionsAnswered = 0;
+  int practiceCorrectAnswers = 0;
+
+  for (final session in sessions) {
+    if (session.sessionType == 'practice' || session.sessionType.contains('practice')) {
+      practiceQuestionsAnswered += session.questionsAnswered;
+      practiceCorrectAnswers += session.correctAnswers;
+    }
+  }
 
   // Calculate exam statistics
   int examQuestionsAnswered = 0;
@@ -494,21 +522,21 @@ final separateStatisticsProvider = FutureProvider<SeparateStatistics>((ref) asyn
   }
 
   // Calculate accuracies
-  final practiceAccuracy = userProgress.totalQuestionsAnswered > 0
-      ? (userProgress.correctAnswers / userProgress.totalQuestionsAnswered) * 100
+  final practiceAccuracy = practiceQuestionsAnswered > 0
+      ? (practiceCorrectAnswers / practiceQuestionsAnswered) * 100
       : 0.0;
   final examAccuracy = examQuestionsAnswered > 0
       ? (examCorrectAnswers / examQuestionsAnswered) * 100
       : 0.0;
 
   // Combine practice and exam statistics
-  final totalQuestions = userProgress.totalQuestionsAnswered + examQuestionsAnswered;
-  final totalCorrect = userProgress.correctAnswers + examCorrectAnswers;
+  final totalQuestions = practiceQuestionsAnswered + examQuestionsAnswered;
+  final totalCorrect = practiceCorrectAnswers + examCorrectAnswers;
   final overallAccuracy = totalQuestions > 0 ? (totalCorrect / totalQuestions) * 100 : 0.0;
 
   return SeparateStatistics(
-    practiceQuestionsAnswered: userProgress.totalQuestionsAnswered,
-    practiceCorrectAnswers: userProgress.correctAnswers,
+    practiceQuestionsAnswered: practiceQuestionsAnswered,
+    practiceCorrectAnswers: practiceCorrectAnswers,
     practiceAccuracy: practiceAccuracy,
     examQuestionsAnswered: examQuestionsAnswered,
     examCorrectAnswers: examCorrectAnswers,
@@ -554,10 +582,11 @@ class CategoryLevelStats {
 final hierarchicalStatisticsProvider = FutureProvider<Map<String, HierarchicalCategoryStatistics>>((ref) async {
   final examResults = await ref.read(examResultsProvider.future);
 
-  // Initialize hierarchical categories
+  // Initialize hierarchical categories (includes 문장삽입 for Part 6 questions)
   Map<String, Map<int, CategoryLevelStats>> hierarchicalCategories = {
     '문법': {},
     '어휘': {},
+    '문장삽입': {}, // Added to support Part 6 sentence insert questions
   };
 
   // Process all exam results
@@ -612,6 +641,36 @@ final hierarchicalStatisticsProvider = FutureProvider<Map<String, HierarchicalCa
 
 // Helper function to determine main category
 String _determineMainCategory(SimpleQuestion question) {
+  // First, check if it's a Part 6 question
+  final isPart6 = _getPartNumber(question.id) == 6;
+
+  // For Part 6, check if it's a sentence insert question
+  if (isPart6) {
+    // Sentence insert questions typically have full sentences as options
+    // Check if ALL options are full sentences (contain periods or are long)
+    final options = question.options;
+    if (options.length >= 3) {
+      int sentenceCount = 0;
+      for (final option in options) {
+        // Consider it a sentence if it:
+        // 1. Contains a period, or
+        // 2. Is longer than 50 characters, or
+        // 3. Contains subject-verb structure (has "I", "we", "they", "he", "she", "it" followed by a verb)
+        if (option.contains('.') ||
+            option.length > 50 ||
+            RegExp(r'\b(I|We|They|He|She|It)\s+(am|is|are|was|were|have|has|had|will|would|can|could|should|shall)\b', caseSensitive: false).hasMatch(option) ||
+            RegExp(r'\b(I|We|They|He|She|It)\s+\w+(s|ed|ing)\b', caseSensitive: false).hasMatch(option)) {
+          sentenceCount++;
+        }
+      }
+
+      // If at least 3 out of 4 options are sentences, it's a sentence insert question
+      if (sentenceCount >= 3) {
+        return '문장삽입';
+      }
+    }
+  }
+
   final questionType = question.questionType?.toLowerCase() ?? '';
 
   if (questionType.contains('vocabulary')) {
@@ -634,3 +693,154 @@ String _determineMainCategory(SimpleQuestion question) {
 
   return '문법';
 }
+
+// Helper function to determine which part a question belongs to
+int? _getPartNumber(String questionId) {
+  if (questionId.contains('PART5') || questionId.contains('Part5')) {
+    return 5;
+  } else if (questionId.contains('PART6') || questionId.contains('Part6')) {
+    return 6;
+  }
+  return null;
+}
+
+// Part-Specific Statistics Provider
+final partStatisticsProvider = FutureProvider.family<SeparateStatistics, int>((ref, partNumber) async {
+  // Get practice sessions
+  final sessions = await ref.read(learningSessionsProvider.future);
+
+  // Get exam results
+  final examResults = await ref.read(examResultsProvider.future);
+
+  // Filter sessions for this part (practice)
+  final practiceSessionsForPart = sessions.where((session) {
+    if (session.sessionType == 'practice' || session.sessionType.contains('practice')) {
+      // Check if any question IDs belong to this part
+      return session.questionIds.any((qId) => _getPartNumber(qId) == partNumber);
+    }
+    return false;
+  }).toList();
+
+  // Calculate practice statistics for this part
+  int practiceQuestionsAnswered = 0;
+  int practiceCorrectAnswers = 0;
+
+  for (final session in practiceSessionsForPart) {
+    practiceQuestionsAnswered += session.questionsAnswered;
+    practiceCorrectAnswers += session.correctAnswers;
+  }
+
+  // Filter exam results for this part
+  final examRepository = ref.read(questionRepositoryProvider);
+  int examQuestionsAnswered = 0;
+  int examCorrectAnswers = 0;
+
+  for (final examResult in examResults) {
+    // Check if this exam result belongs to the specified part
+    for (int i = 0; i < examResult.questions.length; i++) {
+      final question = examResult.questions[i];
+      if (_getPartNumber(question.id) == partNumber) {
+        examQuestionsAnswered++;
+        if (i < examResult.userAnswers.length &&
+            examResult.userAnswers[i] == question.correctAnswerIndex) {
+          examCorrectAnswers++;
+        }
+      }
+    }
+  }
+
+  // Calculate accuracies
+  final practiceAccuracy = practiceQuestionsAnswered > 0
+      ? (practiceCorrectAnswers / practiceQuestionsAnswered) * 100
+      : 0.0;
+  final examAccuracy = examQuestionsAnswered > 0
+      ? (examCorrectAnswers / examQuestionsAnswered) * 100
+      : 0.0;
+
+  // Combine practice and exam statistics
+  final totalQuestions = practiceQuestionsAnswered + examQuestionsAnswered;
+  final totalCorrect = practiceCorrectAnswers + examCorrectAnswers;
+  final overallAccuracy = totalQuestions > 0 ? (totalCorrect / totalQuestions) * 100 : 0.0;
+
+  return SeparateStatistics(
+    practiceQuestionsAnswered: practiceQuestionsAnswered,
+    practiceCorrectAnswers: practiceCorrectAnswers,
+    practiceAccuracy: practiceAccuracy,
+    examQuestionsAnswered: examQuestionsAnswered,
+    examCorrectAnswers: examCorrectAnswers,
+    examAccuracy: examAccuracy,
+    totalQuestionsAnswered: totalQuestions,
+    totalCorrectAnswers: totalCorrect,
+    overallAccuracy: overallAccuracy,
+  );
+});
+
+// Part-Specific Hierarchical Statistics Provider
+final partHierarchicalStatisticsProvider = FutureProvider.family<Map<String, HierarchicalCategoryStatistics>, int>((ref, partNumber) async {
+  final examResults = await ref.read(examResultsProvider.future);
+
+  // Initialize hierarchical categories (Part 6 has 3 categories, others have 2)
+  Map<String, Map<int, CategoryLevelStats>> hierarchicalCategories = partNumber == 6
+      ? {
+          '문법': {},
+          '어휘': {},
+          '문장삽입': {},
+        }
+      : {
+          '문법': {},
+          '어휘': {},
+        };
+
+  // Process exam results for this specific part
+  for (final examResult in examResults) {
+    for (int i = 0; i < examResult.questions.length; i++) {
+      final question = examResult.questions[i];
+
+      // Only process questions from the specified part
+      if (_getPartNumber(question.id) != partNumber) continue;
+
+      final userAnswer = i < examResult.userAnswers.length ? examResult.userAnswers[i] : -1;
+      final isCorrect = userAnswer == question.correctAnswerIndex;
+
+      // Determine main category (문법 or 어휘)
+      final mainCategory = _determineMainCategory(question);
+      final difficultyLevel = question.difficultyLevel;
+
+      // Initialize level stats if not exists
+      if (!hierarchicalCategories[mainCategory]!.containsKey(difficultyLevel)) {
+        hierarchicalCategories[mainCategory]![difficultyLevel] = CategoryLevelStats(
+          level: difficultyLevel,
+          correct: 0,
+          total: 0,
+        );
+      }
+
+      // Update stats
+      final currentStats = hierarchicalCategories[mainCategory]![difficultyLevel]!;
+      hierarchicalCategories[mainCategory]![difficultyLevel] = CategoryLevelStats(
+        level: difficultyLevel,
+        correct: currentStats.correct + (isCorrect ? 1 : 0),
+        total: currentStats.total + 1,
+      );
+    }
+  }
+
+  // Create final hierarchical category statistics
+  final result = <String, HierarchicalCategoryStatistics>{};
+  for (final mainCategory in hierarchicalCategories.keys) {
+    final levels = hierarchicalCategories[mainCategory]!;
+    final totalCorrect = levels.values.fold(0, (sum, stats) => sum + stats.correct);
+    final totalQuestions = levels.values.fold(0, (sum, stats) => sum + stats.total);
+
+    if (totalQuestions > 0) {
+      result[mainCategory] = HierarchicalCategoryStatistics(
+        name: mainCategory,
+        totalCorrect: totalCorrect,
+        totalQuestions: totalQuestions,
+        levels: levels,
+      );
+    }
+  }
+
+  return result;
+});
