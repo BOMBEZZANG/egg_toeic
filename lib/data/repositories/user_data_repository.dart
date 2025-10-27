@@ -55,6 +55,11 @@ abstract class UserDataRepository extends BaseRepository {
   Future<ExamResult?> getExamResult(String examRound);
   Future<List<ExamResult>> getAllExamResults();
 
+  // Exam Progress (for save/resume functionality)
+  Future<void> saveExamProgress(String progressId, Map<String, dynamic> progressData);
+  Future<Map<String, dynamic>?> loadExamProgress(String progressId);
+  Future<void> deleteExamProgress(String progressId);
+
   // Question Results
   Future<void> updateQuestionResult({
     required String questionId,
@@ -180,6 +185,93 @@ class UserDataRepositoryImpl implements UserDataRepository {
             .map((json) => ExamResult.fromJson(Map<String, dynamic>.from(json)))
             .toList();
         print('📚 Loaded ${_examResults.length} exam results from Hive storage');
+
+        // Debug: show all loaded exam results BEFORE migration
+        print('📊 Before migration:');
+        for (final result in _examResults) {
+          print('  📋 ${result.examRound} (Part ${result.partNumber}), questions: ${result.questions.length}, userAnswers: ${result.userAnswers.length}, accuracy: ${result.accuracy}');
+        }
+
+        // EMERGENCY FIX: Clear all corrupted exam results (questions.length = 0 but correctAnswers > 0)
+        final hasEmptyQuestions = _examResults.any((r) => r.questions.isEmpty && r.correctAnswers > 0);
+        if (hasEmptyQuestions) {
+          print('🚨 CLEARING ALL CORRUPTED EXAM RESULTS - found results with empty questions but positive correctAnswers');
+          print('   Please retake your exams to see statistics correctly');
+          _examResults.clear();
+          await _saveExamResultsToHive();
+
+          // Also delete from Firebase
+          try {
+            final userId = _authService.currentUserId;
+            final batch = _firestore.batch();
+            final snapshot = await _firestore
+                .collection('users')
+                .doc(userId)
+                .collection('examResults')
+                .get();
+            for (final doc in snapshot.docs) {
+              batch.delete(doc.reference);
+            }
+            await batch.commit();
+            print('🗑️ Deleted ${snapshot.docs.length} corrupted exam results from Firebase');
+          } catch (e) {
+            print('⚠️ Could not delete from Firebase: $e');
+          }
+
+          print('✅ Cleared all exam data. Ready for fresh exams.');
+          return; // Exit early, skip migration
+        }
+
+        // Recalculate accuracy for all results to fix any data corruption
+        bool needsRecalculation = false;
+        final updatedResults = <ExamResult>[];
+
+        for (final result in _examResults) {
+          if (result.questions.isNotEmpty) {
+            // Recalculate correct answers
+            int recalculatedCorrect = 0;
+            for (int i = 0; i < result.userAnswers.length && i < result.questions.length; i++) {
+              if (result.userAnswers[i] == result.questions[i].correctAnswerIndex) {
+                recalculatedCorrect++;
+              }
+            }
+
+            final recalculatedAccuracy = recalculatedCorrect / result.questions.length;
+
+            // Check if data needs fixing
+            if (recalculatedCorrect != result.correctAnswers ||
+                (recalculatedAccuracy - result.accuracy).abs() > 0.01) {
+              print('🔄 Fixing ${result.examRound}: correctAnswers ${result.correctAnswers} → $recalculatedCorrect, accuracy ${result.accuracy.toStringAsFixed(3)} → ${recalculatedAccuracy.toStringAsFixed(3)}');
+              needsRecalculation = true;
+
+              updatedResults.add(ExamResult(
+                id: result.id,
+                examRound: result.examRound,
+                questions: result.questions,
+                userAnswers: result.userAnswers,
+                examStartTime: result.examStartTime,
+                examEndTime: result.examEndTime,
+                correctAnswers: recalculatedCorrect,
+                accuracy: recalculatedAccuracy,
+                partNumber: result.partNumber,
+              ));
+            } else {
+              updatedResults.add(result);
+            }
+          } else if (result.correctAnswers > 0) {
+            // Has correct answers but no questions - invalid data, skip it
+            print('⚠️ Skipping ${result.examRound}: has correctAnswers but no questions');
+            needsRecalculation = true;
+          } else {
+            updatedResults.add(result);
+          }
+        }
+
+        if (needsRecalculation) {
+          _examResults = updatedResults;
+          await _saveExamResultsToHive();
+          print('✅ Recalculated accuracy for exam results');
+        }
       } else {
         _examResults = [];
         print('📚 No exam results found in Hive storage, starting with empty list');
@@ -1025,15 +1117,43 @@ class UserDataRepositoryImpl implements UserDataRepository {
     print('💾 Saved exam result for ${examResult.examRound}. Total results: ${_examResults.length}');
   }
 
+  /// Helper to determine which TOEIC part a question belongs to
+  int? _getPartNumberFromQuestionId(String questionId) {
+    if (questionId.contains('PART2') || questionId.contains('Part2')) {
+      return 2;
+    } else if (questionId.contains('PART6') || questionId.contains('Part6')) {
+      return 6;
+    } else if ((questionId.startsWith('PRAC_') || questionId.startsWith('EXAM_')) &&
+        !questionId.contains('Part6') && !questionId.contains('Part2')) {
+      return 5;
+    }
+    return null;
+  }
+
   Future<void> _saveExamResultToFirestore(ExamResult examResult) async {
     try {
       final userId = _authService.currentUserId;
+
+      print('☁️ Saving exam result to Firebase for user: $userId, round: ${examResult.examRound}');
 
       final duration = examResult.examEndTime.difference(examResult.examStartTime);
       final totalQuestions = examResult.questions.length;
       final percentage = totalQuestions > 0
           ? ((examResult.correctAnswers / totalQuestions) * 100).round()
           : 0;
+
+      // Determine which part this exam belongs to
+      int? partNumber;
+      if (examResult.questions.isNotEmpty) {
+        partNumber = _getPartNumberFromQuestionId(examResult.questions.first.id);
+        print('🔍 Detected part number from question ID "${examResult.questions.first.id}": $partNumber');
+      }
+
+      // Also use the partNumber from the examResult if available
+      if (examResult.partNumber != null) {
+        partNumber = examResult.partNumber;
+        print('✅ Using partNumber from ExamResult: $partNumber');
+      }
 
       // Save only summary data (metadata), not full question details
       await _firestore
@@ -1044,6 +1164,7 @@ class UserDataRepositoryImpl implements UserDataRepository {
           .set({
         'id': examResult.id,
         'examRound': examResult.examRound,
+        'partNumber': partNumber, // NEW: Store which part this exam is for
         'completedAt': FieldValue.serverTimestamp(),
         'examStartTime': Timestamp.fromDate(examResult.examStartTime),
         'examEndTime': Timestamp.fromDate(examResult.examEndTime),
@@ -1055,7 +1176,7 @@ class UserDataRepositoryImpl implements UserDataRepository {
         // Don't save full questions array - too much data!
       }, SetOptions(merge: true));
 
-      print('☁️ Exam result synced to Firebase: ${examResult.examRound}');
+      print('☁️ Exam result synced to Firebase: ${examResult.examRound} (Part $partNumber)');
     } catch (e) {
       print('❌ Error saving exam result to Firebase: $e');
       // Don't throw - local save already succeeded
@@ -1085,6 +1206,8 @@ class UserDataRepositoryImpl implements UserDataRepository {
     try {
       final userId = _authService.currentUserId;
 
+      print('🔍 Syncing exam results from Firebase for user: $userId');
+
       final snapshot = await _firestore
           .collection('users')
           .doc(userId)
@@ -1093,9 +1216,14 @@ class UserDataRepositoryImpl implements UserDataRepository {
 
       print('🔄 Syncing ${snapshot.docs.length} exam results from Firebase...');
 
+      if (snapshot.docs.isEmpty) {
+        print('⚠️ No exam results found in Firebase. Path: users/$userId/examResults');
+      }
+
       for (final doc in snapshot.docs) {
         final data = doc.data();
         final examRound = data['examRound'] as String;
+        final partNumber = data['partNumber'] as int?;
 
         // Check if we already have this result locally
         final existingIndex = _examResults.indexWhere((r) => r.examRound == examRound);
@@ -1119,10 +1247,30 @@ class UserDataRepositoryImpl implements UserDataRepository {
             userAnswers: [], // Empty
             examStartTime: examStartTime,
             examEndTime: examEndTime,
+            partNumber: partNumber,
           );
 
           _examResults.add(examResult);
-          print('📥 Loaded exam result from Firebase: $examRound');
+          print('📥 Loaded exam result from Firebase: $examRound (Part $partNumber)');
+        } else {
+          // Update partNumber if it's missing in local data
+          final existingResult = _examResults[existingIndex];
+          if (existingResult.partNumber == null && partNumber != null) {
+            print('🔄 Updating partNumber for $examRound: null → $partNumber');
+            _examResults[existingIndex] = ExamResult(
+              id: existingResult.id,
+              examRound: existingResult.examRound,
+              correctAnswers: existingResult.correctAnswers,
+              accuracy: existingResult.accuracy,
+              questions: existingResult.questions,
+              userAnswers: existingResult.userAnswers,
+              examStartTime: existingResult.examStartTime,
+              examEndTime: existingResult.examEndTime,
+              partNumber: partNumber, // Update with Firebase value
+            );
+          } else {
+            print('⏭️ Skipping $examRound: already exists locally with Part ${existingResult.partNumber}');
+          }
         }
       }
 
@@ -1130,6 +1278,12 @@ class UserDataRepositoryImpl implements UserDataRepository {
       if (snapshot.docs.isNotEmpty) {
         await _saveExamResultsToHive();
         print('✅ Synced ${snapshot.docs.length} exam results from Firebase');
+
+        // Debug: show all exam results after sync
+        print('📊 After Firebase sync:');
+        for (final result in _examResults) {
+          print('  📋 ${result.examRound} (Part ${result.partNumber}), questions: ${result.questions.length}, userAnswers: ${result.userAnswers.length}');
+        }
       }
     } catch (e) {
       print('❌ Error syncing exam results from Firebase: $e');
@@ -1150,6 +1304,60 @@ class UserDataRepositoryImpl implements UserDataRepository {
       }
     } else {
       print('⚠️ Cannot save exam results: Hive not initialized or box is null');
+    }
+  }
+
+  // Exam Progress Methods (for save/resume functionality)
+  @override
+  Future<void> saveExamProgress(String progressId, Map<String, dynamic> progressData) async {
+    try {
+      final userId = _authService.currentUserId;
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('examProgress')
+          .doc(progressId)
+          .set(progressData);
+    } catch (e) {
+      print('❌ Error saving exam progress: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>?> loadExamProgress(String progressId) async {
+    try {
+      final userId = _authService.currentUserId;
+      final doc = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('examProgress')
+          .doc(progressId)
+          .get();
+
+      if (doc.exists) {
+        return doc.data();
+      }
+      return null;
+    } catch (e) {
+      print('❌ Error loading exam progress: $e');
+      return null;
+    }
+  }
+
+  @override
+  Future<void> deleteExamProgress(String progressId) async {
+    try {
+      final userId = _authService.currentUserId;
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('examProgress')
+          .doc(progressId)
+          .delete();
+    } catch (e) {
+      print('❌ Error deleting exam progress: $e');
+      rethrow;
     }
   }
 }

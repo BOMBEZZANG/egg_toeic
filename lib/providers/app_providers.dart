@@ -392,7 +392,12 @@ class AchievementsNotifier
 // Exam Results Providers
 final examResultsProvider = FutureProvider<List<ExamResult>>((ref) async {
   final repository = ref.read(userDataRepositoryProvider);
-  return await repository.getAllExamResults();
+  final results = await repository.getAllExamResults();
+  print('📊 examResultsProvider loaded ${results.length} exam results');
+  for (final result in results) {
+    print('  - ${result.examRound} (Part ${result.partNumber}): ${result.correctAnswers}/${result.questions.length} correct, accuracy: ${result.accuracy.toStringAsFixed(1)}%');
+  }
+  return results;
 });
 
 // Combined Statistics Model
@@ -696,12 +701,17 @@ String _determineMainCategory(SimpleQuestion question) {
 
 // Helper function to determine which part a question belongs to
 int? _getPartNumber(String questionId) {
+  // Part 2 questions contain "Part2" in their ID (e.g., Part2_EXAM_T1_P2_Q7)
+  if (questionId.contains('PART2') || questionId.contains('Part2')) {
+    return 2;
+  }
   // Part 6 questions contain "Part6" in their ID
-  if (questionId.contains('PART6') || questionId.contains('Part6')) {
+  else if (questionId.contains('PART6') || questionId.contains('Part6')) {
     return 6;
   }
-  // Part 5 questions start with "PRAC_" and do NOT contain "Part6"
-  else if (questionId.startsWith('PRAC_') && !questionId.contains('Part6')) {
+  // Part 5 questions start with "PRAC_" or "EXAM_" and do NOT contain "Part6" or "Part2"
+  else if ((questionId.startsWith('PRAC_') || questionId.startsWith('EXAM_')) &&
+           !questionId.contains('Part6') && !questionId.contains('Part2')) {
     return 5;
   }
   return null;
@@ -709,11 +719,14 @@ int? _getPartNumber(String questionId) {
 
 // Part-Specific Statistics Provider
 final partStatisticsProvider = FutureProvider.family<SeparateStatistics, int>((ref, partNumber) async {
+  print('📊 partStatisticsProvider($partNumber) starting...');
+
   // Get practice sessions
   final sessions = await ref.read(learningSessionsProvider.future);
 
   // Get exam results
   final examResults = await ref.read(examResultsProvider.future);
+  print('📊 partStatisticsProvider($partNumber) got ${examResults.length} exam results total');
 
   // Filter sessions for this part (practice)
   final practiceSessionsForPart = sessions.where((session) {
@@ -739,15 +752,44 @@ final partStatisticsProvider = FutureProvider.family<SeparateStatistics, int>((r
   int examCorrectAnswers = 0;
 
   for (final examResult in examResults) {
+    // Determine part from partNumber field (preferred) or questions (fallback)
+    int? examPart;
+
+    // First try using the partNumber field (reliable for synced results)
+    if (examResult.partNumber != null) {
+      examPart = examResult.partNumber;
+    }
+    // Fallback: determine from questions if available (local data without partNumber)
+    else if (examResult.questions.isNotEmpty) {
+      examPart = _getPartNumber(examResult.questions.first.id);
+    }
+
+    // Skip if we can't determine the part
+    if (examPart == null) {
+      continue;
+    }
+
     // Check if this exam result belongs to the specified part
-    for (int i = 0; i < examResult.questions.length; i++) {
-      final question = examResult.questions[i];
-      if (_getPartNumber(question.id) == partNumber) {
-        examQuestionsAnswered++;
-        if (i < examResult.userAnswers.length &&
-            examResult.userAnswers[i] == question.correctAnswerIndex) {
-          examCorrectAnswers++;
+    if (examPart == partNumber) {
+      // For results with full question data, count individual questions
+      if (examResult.questions.isNotEmpty) {
+        print('📊 Processing Part $partNumber exam with ${examResult.questions.length} questions');
+        for (int i = 0; i < examResult.questions.length; i++) {
+          final question = examResult.questions[i];
+          if (_getPartNumber(question.id) == partNumber) {
+            examQuestionsAnswered++;
+            if (i < examResult.userAnswers.length &&
+                examResult.userAnswers[i] == question.correctAnswerIndex) {
+              examCorrectAnswers++;
+            }
+          }
         }
+      }
+      // For synced results without full questions, use aggregate data
+      else {
+        print('📊 Processing Part $partNumber exam without questions: correctAnswers=${examResult.correctAnswers}, userAnswers.length=${examResult.userAnswers.length}');
+        examQuestionsAnswered += examResult.correctAnswers + (examResult.userAnswers.length - examResult.correctAnswers);
+        examCorrectAnswers += examResult.correctAnswers;
       }
     }
   }
@@ -764,6 +806,8 @@ final partStatisticsProvider = FutureProvider.family<SeparateStatistics, int>((r
   final totalQuestions = practiceQuestionsAnswered + examQuestionsAnswered;
   final totalCorrect = practiceCorrectAnswers + examCorrectAnswers;
   final overallAccuracy = totalQuestions > 0 ? (totalCorrect / totalQuestions) * 100 : 0.0;
+
+  print('📊 partStatisticsProvider($partNumber) final: examQuestions=$examQuestionsAnswered, examCorrect=$examCorrectAnswers, examAccuracy=${examAccuracy.toStringAsFixed(1)}%');
 
   return SeparateStatistics(
     practiceQuestionsAnswered: practiceQuestionsAnswered,

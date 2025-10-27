@@ -39,15 +39,13 @@ class WrongAnswerHubScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFFFFEBEE),
-                      Color(0xFFFFCDD2),
-                    ],
-                  ),
+                  // Solid matte light indigo background
+                  color: const Color(0xFFE8EAF6),
                   borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: const Color(0xFF5C6BC0).withOpacity(0.2),
+                    width: 1,
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -59,7 +57,7 @@ class WrongAnswerHubScreen extends ConsumerWidget {
                       ),
                       child: const Icon(
                         Icons.quiz,
-                        color: Color(0xFFD32F2F),
+                        color: Color(0xFF5C6BC0),
                         size: 24,
                       ),
                     ),
@@ -69,7 +67,7 @@ class WrongAnswerHubScreen extends ConsumerWidget {
                         '틀린 문제를 복습하고\n실력을 향상시키세요!',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Color(0xFFB71C1C),
+                          color: Color(0xFF3949AB),
                           height: 1.5,
                           fontWeight: FontWeight.w600,
                         ),
@@ -83,21 +81,25 @@ class WrongAnswerHubScreen extends ConsumerWidget {
 
               // Statistics Card
               wrongAnswersAsync.when(
-                loading: () => _buildStatsCard(0, 0),
-                error: (error, stack) => _buildStatsCard(0, 0),
+                loading: () => _buildStatsCard(0, 0, 0),
+                error: (error, stack) => _buildStatsCard(0, 0, 0),
                 data: (wrongAnswers) {
                   final List<WrongAnswer> wrongAnswersList = wrongAnswers.toList();
 
+                  final part2Count = wrongAnswersList.where((WrongAnswer wa) {
+                    return wa.questionId.startsWith('Part2_');
+                  }).length;
+
                   final part5Count = wrongAnswersList.where((WrongAnswer wa) {
                     return wa.questionId.startsWith('Part5_') ||
-                           !wa.questionId.startsWith('Part6_');
+                           (!wa.questionId.startsWith('Part2_') && !wa.questionId.startsWith('Part6_'));
                   }).length;
 
                   final part6Count = wrongAnswersList.where((WrongAnswer wa) {
                     return wa.questionId.startsWith('Part6_');
                   }).length;
 
-                  return _buildStatsCard(part5Count, part6Count);
+                  return _buildStatsCard(part2Count, part5Count, part6Count);
                 },
               ),
 
@@ -107,7 +109,7 @@ class WrongAnswerHubScreen extends ConsumerWidget {
               _buildSectionHeader(
                 'Review by Part',
                 Icons.menu_book,
-                const Color(0xFFD32F2F),
+                const Color(0xFF5C6BC0),
               ),
               const SizedBox(height: 16),
 
@@ -122,27 +124,21 @@ class WrongAnswerHubScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatsCard(int part5Count, int part6Count) {
-    final totalCount = part5Count + part6Count;
+  Widget _buildStatsCard(int part2Count, int part5Count, int part6Count) {
+    final totalCount = part2Count + part5Count + part6Count;
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFD32F2F),
-            Color(0xFFE57373),
-          ],
-        ),
+        // Solid matte color - vibrant indigo
+        color: const Color(0xFF5C6BC0),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFD32F2F).withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-            spreadRadius: 2,
+            color: const Color(0xFF5C6BC0).withOpacity(0.4),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+            spreadRadius: 0,
           ),
         ],
       ),
@@ -169,6 +165,12 @@ class WrongAnswerHubScreen extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
+              _buildStatItem('Part 2', part2Count),
+              Container(
+                width: 1,
+                height: 40,
+                color: Colors.white.withOpacity(0.3),
+              ),
               _buildStatItem('Part 5', part5Count),
               Container(
                 width: 1,
@@ -233,33 +235,45 @@ class WrongAnswerHubScreen extends ConsumerWidget {
 
   Widget _buildPartsGrid(BuildContext context, AsyncValue wrongAnswersAsync) {
     return wrongAnswersAsync.when(
-      loading: () => _buildPartsGridContent(context, 0, 0),
-      error: (error, stack) => _buildPartsGridContent(context, 0, 0),
+      loading: () => _buildPartsGridContent(context, 0, 0, 0),
+      error: (error, stack) => _buildPartsGridContent(context, 0, 0, 0),
       data: (wrongAnswers) {
         final List<WrongAnswer> wrongAnswersList = wrongAnswers.toList();
 
+        final part2Count = wrongAnswersList.where((WrongAnswer wa) {
+          return wa.questionId.startsWith('Part2_');
+        }).length;
+
         final part5Count = wrongAnswersList.where((WrongAnswer wa) {
           return wa.questionId.startsWith('Part5_') ||
-                 !wa.questionId.startsWith('Part6_');
+                 (!wa.questionId.startsWith('Part2_') && !wa.questionId.startsWith('Part6_'));
         }).length;
 
         final part6Count = wrongAnswersList.where((WrongAnswer wa) {
           return wa.questionId.startsWith('Part6_');
         }).length;
 
-        return _buildPartsGridContent(context, part5Count, part6Count);
+        return _buildPartsGridContent(context, part2Count, part5Count, part6Count);
       },
     );
   }
 
-  Widget _buildPartsGridContent(BuildContext context, int part5Count, int part6Count) {
+  Widget _buildPartsGridContent(BuildContext context, int part2Count, int part5Count, int part6Count) {
     final parts = [
+      _WrongAnswerPartInfo(
+        partNumber: 2,
+        title: 'Part 2',
+        subtitle: 'Question-Response',
+        icon: Icons.headphones_rounded,
+        color: const Color(0xFFFF6F00), // Orange for Part 2
+        wrongCount: part2Count,
+      ),
       _WrongAnswerPartInfo(
         partNumber: 5,
         title: 'Part 5',
         subtitle: 'Grammar & Vocabulary',
         icon: Icons.edit_note,
-        color: const Color(0xFF1CB0F6),
+        color: const Color(0xFF00BCD4), // Cyan for Part 5
         wrongCount: part5Count,
       ),
       _WrongAnswerPartInfo(
@@ -267,7 +281,7 @@ class WrongAnswerHubScreen extends ConsumerWidget {
         title: 'Part 6',
         subtitle: 'Reading Comprehension',
         icon: Icons.article,
-        color: const Color(0xFF42A5F5),
+        color: const Color(0xFF9C27B0), // Purple for Part 6
         wrongCount: part6Count,
       ),
     ];
@@ -300,27 +314,19 @@ class WrongAnswerHubScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(20),
         child: Container(
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: hasWrongAnswers
-                  ? [
-                      partInfo.color,
-                      partInfo.color.withOpacity(0.7),
-                    ]
-                  : [
-                      Colors.grey[300]!,
-                      Colors.grey[400]!,
-                    ],
-            ),
+            // Solid matte color instead of gradient
+            color: hasWrongAnswers
+                ? partInfo.color
+                : Colors.grey[400],
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
                 color: hasWrongAnswers
-                    ? partInfo.color.withOpacity(0.3)
-                    : Colors.grey.withOpacity(0.2),
-                blurRadius: 15,
-                offset: const Offset(0, 8),
+                    ? partInfo.color.withOpacity(0.4)
+                    : Colors.grey.withOpacity(0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+                spreadRadius: 0,
               ),
             ],
           ),
@@ -418,7 +424,9 @@ class WrongAnswerHubScreen extends ConsumerWidget {
   }
 
   void _navigateToPart(BuildContext context, int partNumber) {
-    if (partNumber == 5) {
+    if (partNumber == 2) {
+      context.push('/wrong-answers/part2');
+    } else if (partNumber == 5) {
       context.push('/wrong-answers/part5');
     } else if (partNumber == 6) {
       context.push('/wrong-answers/part6');

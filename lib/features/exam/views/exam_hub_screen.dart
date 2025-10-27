@@ -77,11 +77,24 @@ class ExamHubScreen extends ConsumerWidget {
 
               const SizedBox(height: 32),
 
+              // Listening Section Header
+              _buildSectionHeader(
+                'Listening Section',
+                Icons.headphones,
+                const Color(0xFFFF6F00), // Match Part 2 orange
+              ),
+              const SizedBox(height: 16),
+
+              // Listening Parts (2)
+              _buildListeningPartsGrid(context),
+
+              const SizedBox(height: 24),
+
               // Reading Section Header
               _buildSectionHeader(
                 'Reading Section',
                 Icons.menu_book,
-                const Color(0xFF4ECDC4),
+                const Color(0xFF00BCD4), // Match Part 5 cyan
               ),
               const SizedBox(height: 16),
 
@@ -120,6 +133,36 @@ class ExamHubScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildListeningPartsGrid(BuildContext context) {
+    final listeningParts = [
+      _PartInfo(
+        partNumber: 2,
+        title: 'Part 2',
+        subtitle: 'Question-Response',
+        description: '25 Questions',
+        icon: Icons.question_answer,
+        color: const Color(0xFFFF6F00), // Vibrant Orange - Material Design
+        isAvailable: true,
+        availableRounds: 0,
+      ),
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 1.15,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+      ),
+      itemCount: listeningParts.length,
+      itemBuilder: (context, index) {
+        return _buildPartCard(context, listeningParts[index]);
+      },
+    );
+  }
+
   Widget _buildReadingPartsGrid(BuildContext context) {
     final readingParts = [
       _PartInfo(
@@ -128,7 +171,7 @@ class ExamHubScreen extends ConsumerWidget {
         subtitle: 'Incomplete Sentences',
         description: '30 Questions',
         icon: Icons.edit_note,
-        color: const Color(0xFF4ECDC4),
+        color: const Color(0xFF00BCD4), // Vibrant Cyan - Material Design
         isAvailable: true,
         availableRounds: 10,
       ),
@@ -138,7 +181,7 @@ class ExamHubScreen extends ConsumerWidget {
         subtitle: 'Text Completion',
         description: '16 Questions',
         icon: Icons.article,
-        color: const Color(0xFF45B7D1),
+        color: const Color(0xFF9C27B0), // Vibrant Purple - Material Design
         isAvailable: true,
         availableRounds: 5,
       ),
@@ -170,27 +213,19 @@ class ExamHubScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(20),
         child: Container(
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: partInfo.isAvailable
-                  ? [
-                      partInfo.color,
-                      partInfo.color.withOpacity(0.7),
-                    ]
-                  : [
-                      Colors.grey[300]!,
-                      Colors.grey[400]!,
-                    ],
-            ),
+            // Use solid matte color instead of gradient
+            color: partInfo.isAvailable
+                ? partInfo.color
+                : Colors.grey[400],
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
                 color: partInfo.isAvailable
-                    ? partInfo.color.withOpacity(0.3)
-                    : Colors.grey.withOpacity(0.2),
-                blurRadius: 15,
-                offset: const Offset(0, 8),
+                    ? partInfo.color.withOpacity(0.4)
+                    : Colors.grey.withOpacity(0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+                spreadRadius: 0,
               ),
             ],
           ),
@@ -290,7 +325,10 @@ class ExamHubScreen extends ConsumerWidget {
   }
 
   void _navigateToPart(BuildContext context, int partNumber) {
-    if (partNumber == 5) {
+    if (partNumber == 2) {
+      // Navigate to Part 2 exam round selection
+      context.push('/part2/exam-rounds');
+    } else if (partNumber == 5) {
       // Navigate to Part 5 exam level/round selection
       context.push('/part5/exam-levels');
     } else if (partNumber == 6) {

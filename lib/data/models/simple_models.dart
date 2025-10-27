@@ -28,6 +28,9 @@ class SimpleQuestion extends Equatable {
   // Part 6 specific fields
   final String? passageText;        // Reading passage for Part 6
   final String? passageTextKorean;  // Korean translation of passage
+  // Part 2 specific fields
+  final Map<String, dynamic>? audioFiles;  // Audio URLs for Part 2
+  final int? questionNumber;        // Question number (e.g., 7-31 for Part 2)
 
   const SimpleQuestion({
     required this.id,
@@ -43,6 +46,8 @@ class SimpleQuestion extends Equatable {
     this.isBookmarked = false,
     this.passageText,
     this.passageTextKorean,
+    this.audioFiles,
+    this.questionNumber,
   });
 
   static List<String> _extractTags(dynamic tagsData) {
@@ -102,6 +107,8 @@ class SimpleQuestion extends Equatable {
             : DateTime.now(),
         passageText: data['passageText'] as String?,
         passageTextKorean: data['passageTextKorean'] as String?,
+        audioFiles: data['audioFiles'] as Map<String, dynamic>?,
+        questionNumber: data['questionNumber'] as int?,
       );
     } catch (e) {
       print('❌ Error parsing question $id: $e');
@@ -125,6 +132,8 @@ class SimpleQuestion extends Equatable {
       'createdAt': createdAt?.toIso8601String(),
       if (passageText != null) 'passageText': passageText,
       if (passageTextKorean != null) 'passageTextKorean': passageTextKorean,
+      if (audioFiles != null) 'audioFiles': audioFiles,
+      if (questionNumber != null) 'questionNumber': questionNumber,
     };
   }
 
@@ -144,6 +153,8 @@ class SimpleQuestion extends Equatable {
       isBookmarked: json['isBookmarked'] as bool? ?? false,
       passageText: json['passageText'] as String?,
       passageTextKorean: json['passageTextKorean'] as String?,
+      audioFiles: json['audioFiles'] as Map<String, dynamic>?,
+      questionNumber: json['questionNumber'] as int?,
     );
   }
 
@@ -162,6 +173,8 @@ class SimpleQuestion extends Equatable {
       'isBookmarked': isBookmarked,
       if (passageText != null) 'passageText': passageText,
       if (passageTextKorean != null) 'passageTextKorean': passageTextKorean,
+      if (audioFiles != null) 'audioFiles': audioFiles,
+      if (questionNumber != null) 'questionNumber': questionNumber,
     };
   }
 
@@ -180,6 +193,8 @@ class SimpleQuestion extends Equatable {
         isBookmarked,
         passageText,
         passageTextKorean,
+        audioFiles,
+        questionNumber,
       ];
 }
 

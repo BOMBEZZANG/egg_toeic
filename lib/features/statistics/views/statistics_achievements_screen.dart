@@ -39,6 +39,13 @@ class _StatisticsAchievementsScreenState
       curve: Curves.easeInOut,
     ));
     _animationController.forward();
+
+    // Refresh exam results and statistics when screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.invalidate(examResultsProvider);
+      ref.invalidate(separateStatisticsProvider);
+      ref.invalidate(combinedStatisticsProvider);
+    });
   }
 
   @override
@@ -95,7 +102,7 @@ class _StatisticsTab extends ConsumerStatefulWidget {
 }
 
 class _StatisticsTabState extends ConsumerState<_StatisticsTab> {
-  String _selectedFilter = 'all'; // 'all', 'part5', 'part6'
+  String _selectedFilter = 'all'; // 'all', 'part2', 'part5', 'part6'
 
   @override
   Widget build(BuildContext context) {
@@ -104,15 +111,26 @@ class _StatisticsTabState extends ConsumerState<_StatisticsTab> {
     // Watch appropriate statistics based on filter
     final separateStatsAsync = _selectedFilter == 'all'
         ? ref.watch(separateStatisticsProvider)
-        : _selectedFilter == 'part5'
-            ? ref.watch(partStatisticsProvider(5))
-            : ref.watch(partStatisticsProvider(6));
+        : _selectedFilter == 'part2'
+            ? ref.watch(partStatisticsProvider(2))
+            : _selectedFilter == 'part5'
+                ? ref.watch(partStatisticsProvider(5))
+                : ref.watch(partStatisticsProvider(6));
+
+    // Debug logging for Part2 statistics
+    separateStatsAsync.whenData((stats) {
+      if (_selectedFilter == 'part2') {
+        print('📊 Part2 Statistics: ${stats.examQuestionsAnswered} exam questions, ${stats.examCorrectAnswers} correct');
+      }
+    });
 
     final hierarchicalStatsAsync = _selectedFilter == 'all'
         ? ref.watch(hierarchicalStatisticsProvider)
-        : _selectedFilter == 'part5'
-            ? ref.watch(partHierarchicalStatisticsProvider(5))
-            : ref.watch(partHierarchicalStatisticsProvider(6));
+        : _selectedFilter == 'part2'
+            ? ref.watch(partHierarchicalStatisticsProvider(2))
+            : _selectedFilter == 'part5'
+                ? ref.watch(partHierarchicalStatisticsProvider(5))
+                : ref.watch(partHierarchicalStatisticsProvider(6));
 
     return userProgressAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -148,7 +166,14 @@ class _StatisticsTabState extends ConsumerState<_StatisticsTab> {
 
             // Show Part Header if specific part is selected
             if (_selectedFilter != 'all') ...[
-              _buildPartHeaderCard(context, _selectedFilter == 'part5' ? 5 : 6),
+              _buildPartHeaderCard(
+                context,
+                _selectedFilter == 'part2'
+                    ? 2
+                    : _selectedFilter == 'part5'
+                        ? 5
+                        : 6,
+              ),
               const SizedBox(height: AppDimensions.paddingLarge),
             ],
 
@@ -161,11 +186,13 @@ class _StatisticsTabState extends ConsumerState<_StatisticsTab> {
                   _buildModeStatisticsSection(
                     context,
                     separateStats,
-                    _selectedFilter == 'part5'
-                        ? 5
-                        : _selectedFilter == 'part6'
-                            ? 6
-                            : null,
+                    _selectedFilter == 'part2'
+                        ? 2
+                        : _selectedFilter == 'part5'
+                            ? 5
+                            : _selectedFilter == 'part6'
+                                ? 6
+                                : null,
                   ),
                   const SizedBox(height: AppDimensions.paddingLarge),
                 ],
@@ -245,6 +272,17 @@ class _StatisticsTabState extends ConsumerState<_StatisticsTab> {
                     ),
                   ),
                   DropdownMenuItem(
+                    value: 'part2',
+                    child: Row(
+                      children: [
+                        Icon(Icons.headphones,
+                            size: 18, color: Color(0xFFFF6B9D)),
+                        SizedBox(width: 8),
+                        Text('Part 2 통계'),
+                      ],
+                    ),
+                  ),
+                  DropdownMenuItem(
                     value: 'part5',
                     child: Row(
                       children: [
@@ -283,6 +321,13 @@ class _StatisticsTabState extends ConsumerState<_StatisticsTab> {
 
   Widget _buildPartHeaderCard(BuildContext context, int partNumber) {
     final partInfo = {
+      2: {
+        'title': 'Part 2',
+        'subtitle': 'Question-Response',
+        'description': '듣기 이해',
+        'icon': Icons.headphones,
+        'color': const Color(0xFFFF6B9D),
+      },
       5: {
         'title': 'Part 5',
         'subtitle': 'Incomplete Sentences',
@@ -929,6 +974,13 @@ class _PartStatisticsTab extends ConsumerWidget {
 
   Widget _buildPartHeaderCard(BuildContext context, int partNumber) {
     final partInfo = {
+      2: {
+        'title': 'Part 2',
+        'subtitle': 'Question-Response',
+        'description': '듣기 이해',
+        'icon': Icons.headphones,
+        'color': const Color(0xFFFF6B9D),
+      },
       5: {
         'title': 'Part 5',
         'subtitle': 'Incomplete Sentences',

@@ -353,6 +353,7 @@ class _Part6ExamScreenState extends ConsumerState<Part6ExamScreen> {
         userAnswers: userAnswersList,
         examStartTime: _examStartTime!,
         examEndTime: examEndTime,
+        partNumber: 6,
       );
 
       await userDataRepo.saveExamResult(examResult);

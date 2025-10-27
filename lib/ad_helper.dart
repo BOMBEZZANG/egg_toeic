@@ -31,16 +31,14 @@ class AdHelper {
     }
   }
 
-  // App Open Ad Test IDs
+  // **앱 열기 광고(AppOpenAd) ID 추가**
   static String get appOpenAdUnitId {
     if (Platform.isAndroid) {
-      // Google's official test ad unit ID for App Open Ads on Android
-      return "ca-app-pub-3940256099942544/9257395921";
+      return 'ca-app-pub-3940256099942544/9257395921'; // 테스트용
     } else if (Platform.isIOS) {
-      // Google's official test ad unit ID for App Open Ads on iOS
-      return "ca-app-pub-3940256099942544/5575463023";
+      return 'ca-app-pub-3940256099942544/5575463023'; // 테스트용
     } else {
-      throw UnsupportedError("Unsupported platform");
+      throw UnsupportedError('Unsupported platform');
     }
   }
 }

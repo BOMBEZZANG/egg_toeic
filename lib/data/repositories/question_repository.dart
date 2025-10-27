@@ -56,6 +56,12 @@ abstract class QuestionRepository extends BaseRepository {
 
   /// Get Part6 practice questions for a specific date
   Future<List<Question>> getPart6PracticeQuestionsByDate(String date);
+
+  /// Get available Part2 exam rounds from metadata
+  Future<List<String>> getAvailablePart2ExamRounds();
+
+  /// Get Part2 exam questions for a specific round
+  Future<List<Question>> getPart2ExamQuestionsByRound(String round);
 }
 
 class QuestionRepositoryImpl implements QuestionRepository {
@@ -1045,5 +1051,177 @@ class QuestionRepositoryImpl implements QuestionRepository {
       print('❌ Error fetching Part6 practice questions for date $date: $e - no questions available');
       return [];
     }
+  }
+
+  @override
+  Future<List<String>> getAvailablePart2ExamRounds() async {
+    try {
+      print('🔍 Fetching available Part2 exam rounds from metadata...');
+
+      // Get available rounds from metadata/part2_exam summary
+      final summaryDoc = await _firestore
+          .collection('metadata')
+          .doc('part2_exam')
+          .get();
+
+      if (!summaryDoc.exists) {
+        print('⚠️ Part2 exam metadata not found, falling back to question scan');
+        return await _getAvailablePart2ExamRoundsFallback();
+      }
+
+      final data = summaryDoc.data();
+      final availableRounds = List<String>.from(data?['availableRounds'] ?? []);
+
+      // Sort rounds in order (test-1, test-2, etc. -> ROUND_1, ROUND_2)
+      availableRounds.sort((a, b) {
+        final aNum = int.tryParse(a.replaceAll('test-', '')) ?? 0;
+        final bNum = int.tryParse(b.replaceAll('test-', '')) ?? 0;
+        return aNum.compareTo(bNum);
+      });
+
+      // Convert test-1 format to ROUND_1 format
+      final formattedRounds = availableRounds.map((round) {
+        final testNum = round.replaceAll('test-', '');
+        return 'ROUND_$testNum';
+      }).toList();
+
+      print('✅ Found ${formattedRounds.length} Part2 exam rounds from metadata: $formattedRounds');
+      return formattedRounds;
+
+    } catch (e) {
+      print('❌ Error fetching Part2 exam rounds from metadata: $e');
+      return await _getAvailablePart2ExamRoundsFallback();
+    }
+  }
+
+  /// Fallback method to get Part2 exam rounds by scanning question IDs
+  Future<List<String>> _getAvailablePart2ExamRoundsFallback() async {
+    try {
+      print('🔍 Fallback: Scanning Part2 exam question IDs...');
+
+      final querySnapshot = await _firestore
+          .collection('part2examQuestions')
+          .where('status', isEqualTo: 'published')
+          .get();
+
+      final Set<String> uniqueRounds = {};
+
+      for (final doc in querySnapshot.docs) {
+        final questionId = doc.id;
+        // Extract test number from ID format: Part2_EXAM_T1_P2_Q7
+        final testNumber = _extractPart2TestNumberFromId(questionId);
+        if (testNumber != null) {
+          uniqueRounds.add('ROUND_$testNumber');
+        }
+      }
+
+      final sortedRounds = uniqueRounds.toList()..sort();
+      print('✅ Found ${sortedRounds.length} Part2 exam rounds via fallback: $sortedRounds');
+      return sortedRounds;
+
+    } catch (e) {
+      print('❌ Error in Part2 exam rounds fallback: $e');
+      return [];
+    }
+  }
+
+  @override
+  Future<List<Question>> getPart2ExamQuestionsByRound(String round) async {
+    try {
+      final roundNumber = round.replaceAll('ROUND_', '');
+      final roundId = 'test-$roundNumber';
+      print('🔍 Fetching Part2 exam questions for round: $round (roundId: $roundId)');
+
+      // Try to get question IDs from metadata first
+      final roundMetadataDoc = await _firestore
+          .collection('metadata')
+          .doc('part2_exam')
+          .collection('rounds')
+          .doc(roundId)
+          .get();
+
+      List<String> questionIds = [];
+
+      if (roundMetadataDoc.exists) {
+        // Get question IDs from metadata
+        final data = roundMetadataDoc.data();
+        questionIds = List<String>.from(data?['questionIds'] ?? []);
+        print('📋 Found ${questionIds.length} question IDs from metadata');
+      } else {
+        print('⚠️ Metadata not found, falling back to scanning questions');
+        // Fallback: scan all questions
+        final querySnapshot = await _firestore
+            .collection('part2examQuestions')
+            .where('status', isEqualTo: 'published')
+            .get();
+
+        for (final doc in querySnapshot.docs) {
+          if (doc.id.startsWith('Part2_EXAM_T${roundNumber}_')) {
+            questionIds.add(doc.id);
+          }
+        }
+      }
+
+      if (questionIds.isEmpty) {
+        print('⚠️ No question IDs found for round $round');
+        return [];
+      }
+
+      // Fetch questions by IDs
+      final questions = <Question>[];
+      for (final questionId in questionIds) {
+        try {
+          final doc = await _firestore
+              .collection('part2examQuestions')
+              .doc(questionId)
+              .get();
+
+          if (doc.exists) {
+            final data = doc.data();
+            questions.add(Question.fromFirestore(data!, questionId));
+          } else {
+            print('⚠️ Part2 exam question $questionId not found in collection');
+          }
+        } catch (e) {
+          print('❌ Error fetching Part2 exam question $questionId: $e');
+        }
+      }
+
+      // Sort questions by question number (Q7-Q31 for Part 2)
+      questions.sort((a, b) {
+        final aNum = _extractPart2QuestionNumberFromId(a.id) ?? 0;
+        final bNum = _extractPart2QuestionNumberFromId(b.id) ?? 0;
+        return aNum.compareTo(bNum);
+      });
+
+      print('✅ Successfully fetched ${questions.length} Part2 exam questions for round $round');
+      return questions;
+
+    } catch (e) {
+      print('❌ Error fetching Part2 exam questions for round $round: $e');
+      return [];
+    }
+  }
+
+  // Helper method to extract test number from Part2 exam question ID
+  // Format: Part2_EXAM_T1_P2_Q7 -> returns "1"
+  int? _extractPart2TestNumberFromId(String questionId) {
+    final regex = RegExp(r'Part2_EXAM_T(\d+)_');
+    final match = regex.firstMatch(questionId);
+    if (match != null) {
+      return int.tryParse(match.group(1)!);
+    }
+    return null;
+  }
+
+  // Helper method to extract question number from Part2 question ID
+  // Format: Part2_EXAM_T1_P2_Q7 -> returns 7
+  int? _extractPart2QuestionNumberFromId(String questionId) {
+    final regex = RegExp(r'_Q(\d+)$');
+    final match = regex.firstMatch(questionId);
+    if (match != null) {
+      return int.tryParse(match.group(1)!);
+    }
+    return null;
   }
 }

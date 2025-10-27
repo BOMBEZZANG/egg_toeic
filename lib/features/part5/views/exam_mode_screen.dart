@@ -328,6 +328,7 @@ class _ExamModeScreenState extends ConsumerState<ExamModeScreen> {
         userAnswers: _userAnswers,
         examStartTime: _examStartTime!,
         examEndTime: examEndTime,
+        partNumber: 5,
       );
 
       await userDataRepo.saveExamResult(examResult);

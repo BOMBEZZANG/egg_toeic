@@ -205,6 +205,19 @@ final part6ExamQuestionsByRoundProvider =
   return await questionRepo.getPart6ExamQuestionsByRound(round);
 });
 
+// Part 2 available exam rounds provider
+final availablePart2ExamRoundsProvider = FutureProvider<List<String>>((ref) async {
+  final questionRepo = ref.read(questionRepositoryProvider);
+  return await questionRepo.getAvailablePart2ExamRounds();
+});
+
+// Part 2 exam questions for a specific round provider
+final part2ExamQuestionsByRoundProvider =
+    FutureProvider.family<List<Question>, String>((ref, round) async {
+  final questionRepo = ref.read(questionRepositoryProvider);
+  return await questionRepo.getPart2ExamQuestionsByRound(round);
+});
+
 // Analytics repository provider
 final analyticsRepositoryProvider = Provider<AnalyticsRepository>((ref) {
   return AnalyticsRepository(AnalyticsService());

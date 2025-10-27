@@ -15,6 +15,9 @@ import 'package:egg_toeic/features/bookmarks/views/part6_bookmarks_screen.dart';
 import 'package:egg_toeic/features/part5/views/exam_mode_screen.dart';
 import 'package:egg_toeic/features/part5/views/explanation_screen.dart';
 import 'package:egg_toeic/features/part2/views/part2_home_screen.dart';
+import 'package:egg_toeic/features/part2/views/part2_exam_round_selection_screen.dart';
+import 'package:egg_toeic/features/part2/views/part2_exam_screen.dart';
+import 'package:egg_toeic/features/part2/views/part2_exam_result_screen.dart';
 import 'package:egg_toeic/features/part6/views/part6_mode_selection_screen.dart';
 import 'package:egg_toeic/features/part6/views/part6_exam_round_selection_screen.dart';
 import 'package:egg_toeic/features/part6/views/part6_exam_screen.dart';
@@ -25,6 +28,7 @@ import 'package:egg_toeic/features/review/views/review_select_screen.dart';
 import 'package:egg_toeic/features/wrong_answers/views/wrong_answers_screen.dart';
 import 'package:egg_toeic/features/wrong_answers/views/retake_question_screen.dart';
 import 'package:egg_toeic/features/wrong_answers/views/wrong_answer_hub_screen.dart';
+import 'package:egg_toeic/features/wrong_answers/views/part2_wrong_answers_screen.dart';
 import 'package:egg_toeic/features/wrong_answers/views/part6_wrong_answers_screen.dart';
 import 'package:egg_toeic/data/models/simple_models.dart';
 import 'package:egg_toeic/data/models/wrong_answer_model.dart';
@@ -139,6 +143,35 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/part2',
         name: 'part2-home',
         builder: (context, state) => const Part2HomeScreen(),
+        routes: [
+          GoRoute(
+            path: 'exam-rounds',
+            name: 'part2-exam-rounds',
+            builder: (context, state) => const Part2ExamRoundSelectionScreen(),
+          ),
+          GoRoute(
+            path: 'exam/:round',
+            name: 'part2-exam',
+            builder: (context, state) {
+              final round = state.pathParameters['round'] ?? 'ROUND_1';
+              return Part2ExamScreen(round: round);
+            },
+          ),
+          GoRoute(
+            path: 'exam-result',
+            name: 'part2-exam-result',
+            builder: (context, state) {
+              final extra = state.extra as Map<String, dynamic>;
+              return Part2ExamResultScreen(
+                examRound: extra['examRound'] as String,
+                questions: extra['questions'] as List<SimpleQuestion>,
+                userAnswers: extra['userAnswers'] as Map<int, int>,
+                examStartTime: extra['examStartTime'] as DateTime,
+                examEndTime: extra['examEndTime'] as DateTime,
+              );
+            },
+          ),
+        ],
       ),
       GoRoute(
         path: '/part6',
@@ -243,6 +276,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             },
           ),
         ],
+      ),
+      // Wrong Answers Part 2
+      GoRoute(
+        path: '/wrong-answers/part2',
+        name: 'wrong-answers-part2',
+        builder: (context, state) => const Part2WrongAnswersScreen(),
       ),
       // Wrong Answers Part 5
       GoRoute(

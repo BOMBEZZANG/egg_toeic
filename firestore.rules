@@ -84,6 +84,24 @@
           allow write: if isAdmin();
         }
 
+        // Part 6 Practice Questions Collection (allow public read for Flutter app)
+        match /part6practiceQuestions/{questionId} {
+          allow read: if true; // Allow public read for Flutter app
+          allow write: if isAdmin();
+        }
+
+        // Part 2 Exam Questions Collection (allow public read for Flutter app)
+        match /part2examQuestions/{questionId} {
+          allow read: if true; // Allow public read for Flutter app
+          allow write: if isAdmin();
+        }
+
+        // Part 2 Practice Questions Collection (allow public read for Flutter app)
+        match /part2practiceQuestions/{questionId} {
+          allow read: if true; // Allow public read for Flutter app
+          allow write: if isAdmin();
+        }
+
         // Exam Sets Collection
         match /examSets/{setId} {
           allow read: if isAuthenticated();
@@ -143,6 +161,64 @@
                           resource.data.examInfo is map;
         }
 
+        // Part6 Practice Metadata - Summary (allow public read for Flutter app)
+        match /metadata/part6_practice {
+          allow read: if true; // Allow public read for Flutter app
+          allow write: if isAdmin() && isValidMetadata(resource.data);
+        }
+
+        // Part6 Practice Metadata - Daily dates (allow public read for Flutter app)
+        match /metadata/part6_practice/daily/{date} {
+          allow read: if true; // Allow public read for Flutter app
+          allow write: if isAdmin() &&
+                          isValidMetadata(resource.data) &&
+                          resource.data.keys().hasAll([
+                            'date', 'totalQuestions', 'questionIds'
+                          ]) &&
+                          resource.data.date is string &&
+                          resource.data.totalQuestions is number &&
+                          resource.data.questionIds is list;
+        }
+
+        // Part2 Exam Metadata - Summary (allow public read for Flutter app)
+        match /metadata/part2_exam {
+          allow read: if true; // Allow public read for Flutter app
+          allow write: if isAdmin() && isValidMetadata(resource.data);
+        }
+
+        // Part2 Exam Metadata - Rounds (allow public read for Flutter app)
+        match /metadata/part2_exam/rounds/{roundId} {
+          allow read: if true; // Allow public read for Flutter app
+          allow write: if isAdmin() &&
+                          isValidMetadata(resource.data) &&
+                          resource.data.keys().hasAll([
+                            'testNumber', 'roundId', 'totalQuestions', 'questionIds'
+                          ]) &&
+                          resource.data.testNumber is number &&
+                          resource.data.roundId is string &&
+                          resource.data.totalQuestions is number &&
+                          resource.data.questionIds is list;
+        }
+
+        // Part2 Practice Metadata - Summary (allow public read for Flutter app)
+        match /metadata/part2_practice {
+          allow read: if true; // Allow public read for Flutter app
+          allow write: if isAdmin() && isValidMetadata(resource.data);
+        }
+
+        // Part2 Practice Metadata - Daily dates (allow public read for Flutter app)
+        match /metadata/part2_practice/daily/{date} {
+          allow read: if true; // Allow public read for Flutter app
+          allow write: if isAdmin() &&
+                          isValidMetadata(resource.data) &&
+                          resource.data.keys().hasAll([
+                            'date', 'totalQuestions', 'questionIds'
+                          ]) &&
+                          resource.data.date is string &&
+                          resource.data.totalQuestions is number &&
+                          resource.data.questionIds is list;
+        }
+
         // Batch Operations Metadata
         match /metadata/batchOperations/{batchId} {
           allow read: if isAuthenticated();
@@ -189,10 +265,39 @@
           allow update, delete: if false; // Logs are immutable
         }
 
-        // User specific data (for future expansion)
+        // User specific data - UPDATED for anonymous users
         match /users/{userId} {
-          allow read, write: if isAuthenticated() &&
-                                (request.auth.uid == userId || isAdmin());
+          // Allow read/write for authenticated users or anonymous users with valid ID format
+          allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin()) ||
+                         isValidAnonymousUserId(userId);
+          allow write: if isAuthenticated() && (request.auth.uid == userId || isAdmin()) ||
+                          isValidAnonymousUserId(userId);
+
+          // Subcollections - allow authenticated users AND anonymous access
+          match /wrongAnswers/{wrongAnswerId} {
+            allow read, write: if (isAuthenticated() && request.auth.uid == userId) ||
+                                  isValidAnonymousUserId(userId);
+          }
+
+          match /learningSessions/{sessionId} {
+            allow read, write: if (isAuthenticated() && request.auth.uid == userId) ||
+                                  isValidAnonymousUserId(userId);
+          }
+
+          match /examResults/{resultId} {
+            allow read, write: if (isAuthenticated() && request.auth.uid == userId) ||
+                                  isValidAnonymousUserId(userId);
+          }
+
+          match /bookmarks/{bookmarkId} {
+            allow read, write: if (isAuthenticated() && request.auth.uid == userId) ||
+                                  isValidAnonymousUserId(userId);
+          }
+
+          match /examProgress/{progressId} {
+            allow read, write: if (isAuthenticated() && request.auth.uid == userId) ||
+                                  isValidAnonymousUserId(userId);
+          }
         }
 
         // Settings collection (admin only)
@@ -210,8 +315,8 @@
         // User Answers Collection - UPDATED for anonymous analytics
         match /userAnswers/{answerId} {
           allow read: if true; // Allow public read for analytics
-          allow create: if (isAuthenticated() && request.auth.uid == resource.data.userId) ||
-                           (isValidAnonymousUserId(resource.data.userId) && isValidUserAnswer(resource.data));
+          allow create: if (isAuthenticated() && request.auth.uid == request.resource.data.userId) ||
+                           (isValidAnonymousUserId(request.resource.data.userId) && isValidUserAnswer(request.resource.data));
           allow update, delete: if isAdmin(); // Only admin can modify/delete answers
         }
 

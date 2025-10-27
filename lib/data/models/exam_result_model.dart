@@ -10,6 +10,7 @@ class ExamResult extends Equatable {
   final DateTime examEndTime;
   final int correctAnswers;
   final double accuracy;
+  final int? partNumber; // Which TOEIC part (2, 5, 6, etc.)
 
   const ExamResult({
     required this.id,
@@ -20,6 +21,7 @@ class ExamResult extends Equatable {
     required this.examEndTime,
     required this.correctAnswers,
     required this.accuracy,
+    this.partNumber,
   });
 
   factory ExamResult.create({
@@ -28,6 +30,7 @@ class ExamResult extends Equatable {
     required List<int> userAnswers,
     required DateTime examStartTime,
     required DateTime examEndTime,
+    int? partNumber,
   }) {
     // Calculate correct answers
     int correctCount = 0;
@@ -48,6 +51,7 @@ class ExamResult extends Equatable {
       examEndTime: examEndTime,
       correctAnswers: correctCount,
       accuracy: accuracy,
+      partNumber: partNumber,
     );
   }
 
@@ -63,6 +67,7 @@ class ExamResult extends Equatable {
       examEndTime: DateTime.parse(json['examEndTime'] as String),
       correctAnswers: json['correctAnswers'] as int,
       accuracy: (json['accuracy'] as num).toDouble(),
+      partNumber: json['partNumber'] as int?,
     );
   }
 
@@ -76,6 +81,7 @@ class ExamResult extends Equatable {
       'examEndTime': examEndTime.toIso8601String(),
       'correctAnswers': correctAnswers,
       'accuracy': accuracy,
+      'partNumber': partNumber,
     };
   }
 
@@ -89,5 +95,6 @@ class ExamResult extends Equatable {
         examEndTime,
         correctAnswers,
         accuracy,
+        partNumber,
       ];
 }
