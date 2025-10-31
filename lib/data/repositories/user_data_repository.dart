@@ -192,34 +192,13 @@ class UserDataRepositoryImpl implements UserDataRepository {
           print('  📋 ${result.examRound} (Part ${result.partNumber}), questions: ${result.questions.length}, userAnswers: ${result.userAnswers.length}, accuracy: ${result.accuracy}');
         }
 
-        // EMERGENCY FIX: Clear all corrupted exam results (questions.length = 0 but correctAnswers > 0)
+        // FIX: Handle exam results with empty questions but valid correctAnswers/accuracy
+        // These results still have valid statistics, just missing the question details
         final hasEmptyQuestions = _examResults.any((r) => r.questions.isEmpty && r.correctAnswers > 0);
         if (hasEmptyQuestions) {
-          print('🚨 CLEARING ALL CORRUPTED EXAM RESULTS - found results with empty questions but positive correctAnswers');
-          print('   Please retake your exams to see statistics correctly');
-          _examResults.clear();
-          await _saveExamResultsToHive();
-
-          // Also delete from Firebase
-          try {
-            final userId = _authService.currentUserId;
-            final batch = _firestore.batch();
-            final snapshot = await _firestore
-                .collection('users')
-                .doc(userId)
-                .collection('examResults')
-                .get();
-            for (final doc in snapshot.docs) {
-              batch.delete(doc.reference);
-            }
-            await batch.commit();
-            print('🗑️ Deleted ${snapshot.docs.length} corrupted exam results from Firebase');
-          } catch (e) {
-            print('⚠️ Could not delete from Firebase: $e');
-          }
-
-          print('✅ Cleared all exam data. Ready for fresh exams.');
-          return; // Exit early, skip migration
+          print('⚠️ Found exam results with empty questions - statistics will use stored correctAnswers/accuracy');
+          print('   Note: "View Results" may not work fully, but statistics are preserved');
+          // Don't clear - just log and continue
         }
 
         // Recalculate accuracy for all results to fix any data corruption
@@ -1220,6 +1199,8 @@ class UserDataRepositoryImpl implements UserDataRepository {
         print('⚠️ No exam results found in Firebase. Path: users/$userId/examResults');
       }
 
+      bool hasNewOrUpdatedResults = false;
+
       for (final doc in snapshot.docs) {
         final data = doc.data();
         final examRound = data['examRound'] as String;
@@ -1251,6 +1232,7 @@ class UserDataRepositoryImpl implements UserDataRepository {
           );
 
           _examResults.add(examResult);
+          hasNewOrUpdatedResults = true;
           print('📥 Loaded exam result from Firebase: $examRound (Part $partNumber)');
         } else {
           // Update partNumber if it's missing in local data
@@ -1268,14 +1250,16 @@ class UserDataRepositoryImpl implements UserDataRepository {
               examEndTime: existingResult.examEndTime,
               partNumber: partNumber, // Update with Firebase value
             );
+            hasNewOrUpdatedResults = true;
           } else {
             print('⏭️ Skipping $examRound: already exists locally with Part ${existingResult.partNumber}');
           }
         }
       }
 
-      // Save synced results to Hive
-      if (snapshot.docs.isNotEmpty) {
+      // Only save to Hive if we added new results or updated existing ones
+      // This prevents overwriting complete local data with partial Firebase data
+      if (hasNewOrUpdatedResults) {
         await _saveExamResultsToHive();
         print('✅ Synced ${snapshot.docs.length} exam results from Firebase');
 
@@ -1284,6 +1268,8 @@ class UserDataRepositoryImpl implements UserDataRepository {
         for (final result in _examResults) {
           print('  📋 ${result.examRound} (Part ${result.partNumber}), questions: ${result.questions.length}, userAnswers: ${result.userAnswers.length}');
         }
+      } else {
+        print('✅ No new exam results to sync - keeping local data intact');
       }
     } catch (e) {
       print('❌ Error syncing exam results from Firebase: $e');

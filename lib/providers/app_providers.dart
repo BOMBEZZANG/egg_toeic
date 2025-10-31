@@ -395,7 +395,11 @@ final examResultsProvider = FutureProvider<List<ExamResult>>((ref) async {
   final results = await repository.getAllExamResults();
   print('📊 examResultsProvider loaded ${results.length} exam results');
   for (final result in results) {
-    print('  - ${result.examRound} (Part ${result.partNumber}): ${result.correctAnswers}/${result.questions.length} correct, accuracy: ${result.accuracy.toStringAsFixed(1)}%');
+    // Calculate total questions: use questions.length if available, otherwise calculate from accuracy
+    final totalQuestions = result.questions.isNotEmpty
+        ? result.questions.length
+        : (result.accuracy > 0 ? (result.correctAnswers / result.accuracy).round() : 0);
+    print('  - ${result.examRound} (Part ${result.partNumber}): ${result.correctAnswers}/$totalQuestions correct, accuracy: ${result.accuracy.toStringAsFixed(1)}%');
   }
   return results;
 });
@@ -439,10 +443,21 @@ final combinedStatisticsProvider = FutureProvider<CombinedStatistics>((ref) asyn
   int examCorrectAnswers = 0;
 
   for (final examResult in examResults) {
-    examQuestionsAnswered += examResult.userAnswers.length;
-    for (int i = 0; i < examResult.userAnswers.length && i < examResult.questions.length; i++) {
-      if (examResult.userAnswers[i] == examResult.questions[i].correctAnswerIndex) {
-        examCorrectAnswers++;
+    // If questions/userAnswers arrays are empty but we have correctAnswers stored, use stored data
+    if (examResult.questions.isEmpty && examResult.userAnswers.isEmpty && examResult.correctAnswers > 0) {
+      // Calculate total questions from accuracy: totalQuestions = correctAnswers / accuracy
+      final totalQuestions = examResult.accuracy > 0
+          ? (examResult.correctAnswers / examResult.accuracy).round()
+          : 0;
+      examQuestionsAnswered += totalQuestions;
+      examCorrectAnswers += examResult.correctAnswers;
+    } else {
+      // Use normal calculation when we have full data
+      examQuestionsAnswered += examResult.userAnswers.length;
+      for (int i = 0; i < examResult.userAnswers.length && i < examResult.questions.length; i++) {
+        if (examResult.userAnswers[i] == examResult.questions[i].correctAnswerIndex) {
+          examCorrectAnswers++;
+        }
       }
     }
   }
